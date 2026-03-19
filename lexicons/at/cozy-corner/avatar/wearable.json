@@ -1,0 +1,78 @@
+{
+  "lexicon": 1,
+  "id": "at.cozy-corner.avatar.wearable",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A wearable overlay for avatars. Provides directional sprite sheets with walk animation frames. Can be created by any user and equipped by others. Compositing z-order is determined by position in the avatar's wearable list, not by the wearable itself.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["name", "spriteSheet", "layers", "createdAt"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 640,
+            "maxGraphemes": 64,
+            "description": "Display name for the wearable."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2560,
+            "maxGraphemes": 256,
+            "description": "Free-form description of the wearable."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Tags for the wearable.",
+            "items": {
+              "type": "string",
+              "maxLength": 640,
+              "maxGraphemes": 64
+            }
+          },
+          "spriteSheet": {
+            "type": "blob",
+            "accept": ["image/png", "image/webp"],
+            "maxSize": 5000000
+          },
+          "layers": {
+            "type": "array",
+            "description": "layers of the wearable",
+            "items": {
+              "type": "ref",
+              "ref": "at.cozy-corner.defs#animationLayer"
+            }
+          },
+          "behaviors": {
+            "type": "array",
+            "description": "Lua scripts that define how this wearable responds to events (e.g. setting animation state based on movement, intercepting move events).",
+            "items": {
+              "type": "ref",
+              "ref": "at.cozy-corner.script#script"
+            },
+            "maxLength": 16
+          },
+          "stateProperties": {
+            "type": "array",
+            "description": "Declares the configurable state properties for this wearable. Behaviors read these via entityState.",
+            "items": {
+              "type": "ref",
+              "ref": "at.cozy-corner.defs#stateProperty"
+            },
+            "maxLength": 32
+          },
+          "previewBase": {
+            "type": "ref",
+            "ref": "com.atproto.repo.strongRef",
+            "description": "Optional strong reference to a base avatar record used for previewing this wearable."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+    "lexicon": 1,
+    "id": "at.cozy-corner.house.servers",
+    "defs": {
+        "main": {
+            "type": "query",
+            "description": "Get the servers for a room.",
+            "parameters": {
+                "type": "params",
+                "required": ["room"],
+                "properties": {
+                    "room": {
+                        "type": "ref",
+                        "ref": "com.atproto.repo.strongRef",
+                        "description": "Strong reference to the room record."
+                    }
+                }
+            },
+            "output": {
+                "encoding": "application/json",
+                "schema": {
+                    "type": "object",
+                    "required": ["servers"],
+                    "properties": {
+                        "servers": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "format": "url",
+                                "description": "The server URL."
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

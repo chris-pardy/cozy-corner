@@ -1,0 +1,129 @@
+{
+  "lexicon": 1,
+  "id": "at.cozy-corner.item",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "An item definition. Can be created by any user and referenced by others to place in their houses.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["name", "spriteSheet", "layers", "variants", "createdAt"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 640,
+            "maxGraphemes": 64,
+            "description": "Display name for the item."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2560,
+            "maxGraphemes": 256,
+            "description": "Free-form description of the item."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "maxLength": 64,
+              "maxGraphemes": 64,
+              "description": "A tag for the item."
+            }
+          },
+          "spriteSheet": {
+            "type": "blob",
+            "accept": ["image/png", "image/webp"],
+            "maxSize": 5000000
+          },
+          "layers": {
+            "type": "array",
+            "description": "layers of the item",
+            "items": {
+              "type": "ref",
+              "ref": "at.cozy-corner.defs#animationLayer"
+            }
+          },
+          "variants": {
+            "type": "array",
+            "description": "Alternative visual appearances for this item. Each variant has a name and can set initial state values.",
+            "minLength": 1,
+            "maxLength": 16,
+            "items": {
+              "type": "ref",
+              "ref": "#variant"
+            }
+          },
+          "behaviors": {
+            "type": "array",
+            "description": "Lua scripts that define how this item responds to events.",
+            "items": {
+              "type": "ref",
+              "ref": "at.cozy-corner.script#script"
+            },
+            "maxLength": 16
+          },
+          "stateProperties": {
+            "type": "array",
+            "description": "Declares the configurable state properties for this item. Behaviors read these via entityState; variants and placements can override values.",
+            "items": {
+              "type": "ref",
+              "ref": "at.cozy-corner.defs#stateProperty"
+            },
+            "maxLength": 32
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    },
+    "variant": {
+      "type": "object",
+      "description": "A named visual variant for an item. Sets spatial properties and can override state values.",
+      "required": ["name", "target"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 640,
+          "maxGraphemes": 64,
+          "description": "Display name for this variant."
+        },
+        "target": {
+          "type": "string",
+          "description": "The layer target of the layers to render for this variant."
+        },
+        "itemWidth": {
+          "type": "integer",
+          "description": "Width of the item in tiles.",
+          "minimum": 1
+        },
+        "itemHeight": {
+          "type": "integer",
+          "description": "Height of the item in tiles.",
+          "minimum": 1
+        },
+        "blockedEdges": {
+          "type": "array",
+          "description": "Per-tile edge blocking as a flat array of width * height (row-major). Each value is a bitmask: bits 0-3 = physical blocking per direction (N=1, E=2, S=4, W=8), bits 4-7 = ephemeral blocking per direction (N=16, E=32, S=64, W=128). Physical blocks movement; ephemeral blocks light/sound/heat. A fully blocked square has value 15 (physical) or 255 (both). 0 = no blocking.",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          },
+          "maxLength": 4096
+        },
+        "state": {
+          "type": "array",
+          "description": "State values set by this variant, overriding stateProperty defaults.",
+          "items": {
+            "type": "ref",
+            "ref": "at.cozy-corner.defs#stateValue"
+          },
+          "maxLength": 32
+        }
+      }
+    }
+  }
+}

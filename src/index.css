@@ -1,0 +1,100 @@
+@import url("https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap");
+@import "tailwindcss";
+
+/* ── Dark mode (default) ── */
+:root {
+  --bg-deep: #12100e;
+  --bg-panel: #1c1814;
+  --bg-surface: #261f19;
+  --accent-primary: #f6ad55;
+  --accent-secondary: #ed8936;
+  --accent-tertiary: #fc8181;
+  --text-primary: #faf0e6;
+  --text-muted: #a08060;
+  --text-dim: #5c4a3a;
+  --clr-success: #9ae6b4;
+  --clr-error: #fc8181;
+  --clr-link: #f6ad55;
+  --border-color: #362a1e;
+  --border-hover-color: #4a3828;
+}
+
+/* ── Light mode ── */
+[data-theme="light"] {
+  --bg-deep: #f7f0e5;
+  --bg-panel: #fdf8f1;
+  --bg-surface: #f0e6d6;
+  --accent-primary: #c97b1a;
+  --accent-secondary: #b86514;
+  --accent-tertiary: #c45050;
+  --text-primary: #2e2011;
+  --text-muted: #8a7055;
+  --text-dim: #b8a68e;
+  --clr-success: #4a8a55;
+  --clr-error: #c45050;
+  --clr-link: #c97b1a;
+  --border-color: #ddd0bc;
+  --border-hover-color: #c8b89e;
+}
+
+/* ── Theme transition ── */
+.theme-transitioning,
+.theme-transitioning *,
+.theme-transitioning *::before,
+.theme-transitioning *::after {
+  transition:
+    background-color 0.8s ease,
+    color 0.5s ease,
+    border-color 0.6s ease,
+    box-shadow 0.6s ease !important;
+}
+
+/* ── Animations ── */
+@keyframes arcade-pulse {
+  0%, 100% {
+    background-color: var(--accent-primary);
+    color: var(--bg-deep);
+    border-color: var(--accent-primary);
+    text-shadow:
+      0 0 4px oklch(from var(--accent-primary) l c h / 0.6),
+      0 0 12px oklch(from var(--accent-primary) l c h / 0.3);
+    box-shadow:
+      0 0 8px oklch(from var(--accent-primary) l c h / 0.25),
+      inset 0 0 8px oklch(from var(--accent-primary) l c h / 0.1);
+  }
+  50% {
+    background-color: transparent;
+    color: var(--accent-primary);
+    border-color: oklch(from var(--accent-primary) l c h / 0.4);
+    text-shadow: 0 0 2px oklch(from var(--accent-primary) l c h / 0.2);
+    box-shadow: none;
+  }
+}
+
+@utility animate-arcade {
+  animation: arcade-pulse 3s steps(12) infinite;
+}
+
+@theme {
+  --font-body: "JetBrains Mono", monospace;
+  --font-heading: "Pixelify Sans", sans-serif;
+
+  --color-bg-deep: var(--bg-deep);
+  --color-bg-panel: var(--bg-panel);
+  --color-bg-surface: var(--bg-surface);
+
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-accent-tertiary: var(--accent-tertiary);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-muted: var(--text-muted);
+  --color-text-dim: var(--text-dim);
+
+  --color-success: var(--clr-success);
+  --color-error: var(--clr-error);
+  --color-link: var(--clr-link);
+
+  --color-border: var(--border-color);
+  --color-border-hover: var(--border-hover-color);
+}

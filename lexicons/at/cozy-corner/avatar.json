@@ -1,0 +1,82 @@
+{
+  "lexicon": 1,
+  "id": "at.cozy-corner.avatar",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A user's avatar. One per DID. The base body is a built-in greyscale walk sprite tinted by the tint color. Wearables composite on top in array order.",
+      "key": "literal:self",
+      "record": {
+        "type": "object",
+        "required": ["createdAt"],
+        "properties": {
+          "baseAvatar": {
+            "type": "ref",
+            "ref": "com.atproto.repo.strongRef",
+            "description": "Strong reference to the base avatar record."
+          },
+          "baseAvatarTints": {
+            "type": "array",
+            "description": "Tints for the base avatar layers",
+            "items": {
+              "type": "ref",
+              "ref": "at.cozy-corner.defs#layerTint"
+            }
+          },
+          "baseAvatarTransform": {
+            "type": "ref",
+            "ref": "at.cozy-corner.defs#transform",
+            "description": "Optional 2D affine transform applied when compositing the base avatar, stored as a fixed-point matrix (see at.cozy-corner.defs#wearableTransform)."
+          },
+          "wearables": {
+            "type": "array",
+            "description": "Equipped wearables in composite order (first = bottom layer). Each entry references a wearable and can override tint/offset.",
+            "maxLength": 32,
+            "items": {
+              "type": "ref",
+              "ref": "#equippedWearable"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    },
+    "equippedWearable": {
+      "type": "object",
+      "description": "A wearable equipped on an avatar, with per-equip overrides.",
+      "required": ["wearable"],
+      "properties": {
+        "wearable": {
+          "type": "ref",
+          "ref": "com.atproto.repo.strongRef",
+          "description": "Strong reference to the wearable record."
+        },
+        "tints": {
+          "type": "array",
+          "description": "Tints for the wearable layers",
+          "items": {
+            "type": "ref",
+            "ref": "at.cozy-corner.defs#layerTint"
+          }
+        },
+        "transform": {
+          "type": "ref",
+          "ref": "at.cozy-corner.defs#transform",
+          "description": "Optional 2D affine transform applied when compositing this wearable, stored as a fixed-point matrix (see at.cozy-corner.defs#wearableTransform)."
+        },
+        "state": {
+          "type": "array",
+          "description": "State values for this equipped wearable, overriding stateProperty defaults.",
+          "items": {
+            "type": "ref",
+            "ref": "at.cozy-corner.defs#stateValue"
+          },
+          "maxLength": 32
+        }
+      }
+    }
+  }
+}

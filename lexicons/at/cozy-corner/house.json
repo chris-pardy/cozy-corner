@@ -1,0 +1,38 @@
+{
+  "lexicon": 1,
+  "id": "at.cozy-corner.house",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A user's cozy house. One per DID.",
+      "key": "literal:self",
+      "record": {
+        "type": "object",
+        "required": ["entry", "createdAt"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 640,
+            "maxGraphemes": 64,
+            "description": "Display name for the house."
+          },
+          "splash": {
+            "type": "blob",
+            "description": "Splash image shown while the house is loading.",
+            "accept": ["image/png", "image/webp", "image/jpeg"],
+            "maxSize": 1000000
+          },
+          "entry": {
+            "type": "ref",
+            "ref": "com.atproto.repo.strongRef",
+            "description": "Strong reference to the entry room record (at.cozy-corner.house.room). Visitors spawn in this room's spawn area."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "lexicon": 1,
+  "id": "at.cozy-corner.tileset",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A tileset definition. Named tiles referencing regions from a sprite sheet",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["name", "spriteSheet", "layers", "tiles", "createdAt"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 640,
+            "maxGraphemes": 64,
+            "description": "Display name for the tileset."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2560,
+            "maxGraphemes": 256,
+            "description": "Free-form description of the tileset."
+          },
+          "tags": {
+            "type": "array",
+            "description": "Tags for the tileset.",
+            "items": {
+              "type": "string",
+              "maxLength": 640,
+              "maxGraphemes": 64
+            },
+            "maxLength": 16
+          },
+          "spriteSheet": {
+            "type": "blob",
+            "accept": ["image/png", "image/webp"],
+            "maxSize": 5000000
+          },
+          "layers": {
+            "type": "array",
+            "description": "Layers in the tileset",
+            "items": {
+              "type": "ref",
+              "ref": "at.cozy-corner.defs#animationLayer"
+            }
+          },
+          "tiles": {
+            "type": "array",
+            "description": "Tiles in the tileset",
+            "items": {
+              "type": "ref",
+              "ref": "#tile"
+            },
+            "minLength": 1
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    },
+    "tile": {
+      "type": "object",
+      "description": "A tile in the tileset",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the tile"
+        },
+        "target": {
+          "type": "string",
+          "description": "The target of the tile in the layers"
+        },
+        "wall": {
+          "type": "boolean",
+          "description": "Whether this tile is a wall. Used to auto-generate blocking edges in the room editor."
+        }
+      }
+    }
+  }
+}

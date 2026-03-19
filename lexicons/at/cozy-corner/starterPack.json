@@ -1,0 +1,47 @@
+{
+  "lexicon": 1,
+  "id": "at.cozy-corner.starterPack",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A curated bundle of items and wearables that can be added to a user's inventory in one action. Items and wearables can reference definitions from any PDS, so pack creators can mix and match content from different users.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["name", "createdAt"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 640,
+            "maxGraphemes": 64,
+            "description": "Display name for the starter pack."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2560,
+            "maxGraphemes": 256,
+            "description": "Free-form description of the starter pack."
+          },
+          "splash": {
+            "type": "blob",
+            "description": "Preview image for the starter pack.",
+            "accept": ["image/png", "image/webp", "image/jpeg"],
+            "maxSize": 1000000
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "ref",
+              "ref": "at.cozy-corner.defs#categorizedEntry"
+            },
+            "maxLength": 256
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}

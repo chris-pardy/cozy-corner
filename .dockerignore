@@ -1,0 +1,9 @@
+node_modules
+.output
+dist
+*.log
+.DS_Store
+.git
+.playwright-mcp
+pds
+*.png

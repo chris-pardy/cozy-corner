@@ -1,0 +1,28 @@
+{
+  "lexicon": 1,
+  "id": "at.cozy-corner.script",
+  "defs": {
+    "script": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Display name for the script.",
+          "maxLength": 256
+        },
+        "code": {
+          "type": "string",
+          "description": "Inline Lua source code. Mutually exclusive with codeBlob.",
+          "maxLength": 10000,
+          "maxGraphemes": 10000
+        },
+        "codeBlob": {
+          "type": "blob",
+          "description": "Lua source code stored as a blob. Mutually exclusive with code.",
+          "accept": ["text/x-lua"],
+          "maxSize": 100000
+        }
+      }
+    }
+  }
+}

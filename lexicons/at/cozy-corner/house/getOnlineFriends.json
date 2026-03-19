@@ -1,0 +1,64 @@
+{
+  "lexicon": 1,
+  "id": "at.cozy-corner.house.getOnlineFriends",
+  "defs": {
+    "main": {
+      "type": "query",
+      "description": "Check which of the given DIDs are currently online in any rooms.",
+      "parameters": {
+        "type": "params",
+        "required": ["dids"],
+        "properties": {
+          "dids": {
+            "type": "array",
+            "description": "List of DIDs to check online status for.",
+            "maxLength": 100,
+            "items": {
+              "type": "string",
+              "format": "did"
+            }
+          }
+        }
+      },
+      "output": {
+        "encoding": "application/json",
+        "schema": {
+          "type": "object",
+          "required": ["friends"],
+          "properties": {
+            "friends": {
+              "type": "array",
+              "description": "Online friends and which rooms they are visiting.",
+              "items": {
+                "type": "ref",
+                "ref": "#onlineFriend"
+              }
+            }
+          }
+        }
+      }
+    },
+    "onlineFriend": {
+      "type": "object",
+      "description": "An online friend and the house they are currently visiting.",
+      "required": ["did", "room"],
+      "properties": {
+        "did": {
+          "type": "string",
+          "format": "did",
+          "description": "DID of the online friend."
+        },
+        "room": {
+          "type": "ref",
+          "ref": "com.atproto.repo.strongRef",
+          "description": "Strong reference to the room record."
+        },
+        "server": {
+          "type": "string",
+          "format": "url",
+          "description": "The server URL."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,203 @@
+{
+  "lexicon": 1,
+  "id": "at.cozy-corner.defs",
+  "defs": {
+    "animationFrame": {
+      "type": "object",
+      "description": "A single frame within an animation layer",
+      "required": ["x", "y", "width", "height"],
+      "properties": {
+        "x": {
+          "type": "integer",
+          "description": "Source X in sprite sheet"
+        },
+        "y": {
+          "type": "integer",
+          "description": "Source Y in sprite sheet"
+        },
+        "width": {
+          "type": "integer",
+          "description": "Source width in sprite sheet"
+        },
+        "height": {
+          "type": "integer",
+          "description": "Source height in sprite sheet"
+        },
+        "transform": {
+          "type": "ref",
+          "ref": "#transform"
+        }
+      }
+    },
+    "animationLayer": {
+      "type": "object",
+      "description": "A layer of sprite animations",
+      "required": ["target", "frames"],
+      "properties": {
+        "target": {
+          "type": "string",
+          "description": "The state of the avatar or wearable, or the variant of the item. Values like 'idle', 'walk', 'sit'.",
+          "knownValues": ["idle-north", "walk-south", "sit"]
+        },
+        "layerName": {
+          "type": "string",
+          "description": "The display name of the layer"
+        },
+        "frames": {
+          "type": "array",
+          "description": "The frames of the animation",
+          "items": {
+            "type": "ref",
+            "ref": "#animationFrame"
+          }
+        },
+        "frameRate": {
+          "type": "integer",
+          "description": "The frame rate in milliseconds per frame",
+          "default": 24
+        }
+      }
+    },
+    "layerTint": {
+      "type": "object",
+      "description": "A tint for a layer",
+      "required": ["layerIndexes", "tint"],
+      "properties": {
+        "layerIndexes": {
+          "type": "array",
+          "description": "The indexes of the layers to tint",
+          "items": {
+            "type": "integer",
+            "description": "The index of the layer to tint"
+          }
+        },
+        "tint": {
+          "type": "string",
+          "description": "Hex color to tint the layer (e.g. '#cc4444'). Must be a '#' followed by 3 or 6 hex digits. If omitted, layer renders as-is.",
+          "maxLength": 7
+        }
+      }
+    },
+    "transform": {
+      "type": "object",
+      "description": "2D affine transform for wearables and other sprite-like entities. Components map directly to a CanvasRenderingContext2D-style transform(a, b, c, d, e, f). Values are stored as fixed-point integers where 1000 = 1.0 (e.g. 1500 = 1.5, -500 = -0.5). If omitted, the identity transform is used.",
+      "properties": {
+        "a": {
+          "type": "integer",
+          "description": "Scale X / cos/skew component, fixed-point where 1000 = 1.0. Default 1000.",
+          "default": 1000
+        },
+        "b": {
+          "type": "integer",
+          "description": "Skew Y component, fixed-point where 1000 = 1.0. Default 0.",
+          "default": 0
+        },
+        "c": {
+          "type": "integer",
+          "description": "Skew X component, fixed-point where 1000 = 1.0. Default 0.",
+          "default": 0
+        },
+        "d": {
+          "type": "integer",
+          "description": "Scale Y component, fixed-point where 1000 = 1.0. Default 1000.",
+          "default": 1000
+        },
+        "e": {
+          "type": "integer",
+          "description": "Translate X in avatar or world coordinate units, fixed-point where 1000 = 1.0 unit. Default 0.",
+          "default": 0
+        },
+        "f": {
+          "type": "integer",
+          "description": "Translate Y in avatar or world coordinate units, fixed-point where 1000 = 1.0 unit. Default 0.",
+          "default": 0
+        }
+      }
+    },
+    "movementAttribute": {
+      "type": "object",
+      "description": "A named attribute with a value from 0–200 representing –100 to +100 (shifted positive). Used on critters and items to express attraction/repulsion to tile-emitted signals.",
+      "required": ["attribute", "value"],
+      "properties": {
+        "attribute": {
+          "type": "string",
+          "description": "The attribute name.",
+          "maxLength": 640,
+          "maxGraphemes": 64,
+          "knownValues": ["light", "heat", "food", "water", "comfort", "noise", "people"]
+        },
+        "value": {
+          "type": "integer",
+          "description": "Attribute strength. 0 = –100 (strong repulsion/absence), 100 = neutral, 200 = +100 (strong attraction/presence).",
+          "minimum": 0,
+          "maximum": 200
+        }
+      }
+    },
+    "stateProperty": {
+      "type": "object",
+      "description": "Declares a named, typed state property on an entity. Behaviors read these values via entityState at runtime.",
+      "required": ["name", "type"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Property name used as the state key.",
+          "maxLength": 64
+        },
+        "type": {
+          "type": "string",
+          "description": "Value type. Controls editor widget and serialisation.",
+          "knownValues": ["string", "integer", "blob", "direction", "edges", "attribute"]
+        },
+        "default": {
+          "type": "string",
+          "description": "Default value (as a string). Omit for blob properties."
+        },
+        "allowOverride": {
+          "type": "boolean",
+          "description": "When true, this property can be overridden on placement (room item) or equip (avatar wearable). Defaults to false.",
+          "default": false
+        }
+      }
+    },
+    "stateValue": {
+      "type": "object",
+      "description": "A concrete value for a declared state property. Provide either value (for non-blob types) or blob (for blob type).",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Must match a stateProperty name on the entity.",
+          "maxLength": 64
+        },
+        "value": {
+          "type": "string",
+          "description": "String-serialised value for non-blob properties."
+        },
+        "blob": {
+          "type": "blob",
+          "description": "Blob value for blob-typed properties.",
+          "accept": ["image/png", "image/webp", "image/jpeg", "video/mp4", "audio/mpeg", "audio/ogg", "audio/wav"],
+          "maxSize": 5000000
+        }
+      }
+    },
+    "categorizedEntry": {
+      "type": "object",
+      "description": "An entry in a category.",
+      "required": ["item", "category"],
+      "properties": {
+        "item": {
+          "type": "ref",
+          "ref": "com.atproto.repo.strongRef",
+          "description": "Strong reference to the item record."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of the entry.",
+          "knownValues": ["item", "wearable", "tileset", "baseAvatar", "critter"]
+        }
+      }
+    }
+  }
+}
