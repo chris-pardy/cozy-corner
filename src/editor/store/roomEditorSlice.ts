@@ -28,9 +28,9 @@ export interface RoomExitData {
   direction: number;
 }
 
-/** Per-layer tint data. */
-export interface LayerTintData {
-  layerIndex: number;
+/** Per-channel tint data (matches ChannelTint shape). */
+export interface ChannelTintData {
+  channel: string;
   tint: string;
 }
 
@@ -42,7 +42,7 @@ export interface RoomItemData {
   variant: number;
   foreground: number;
   state: StateValueData[];
-  tints: LayerTintData[];
+  tints: ChannelTintData[];
 }
 
 /** Serializable subset of a placed critter (no HTMLImageElement). */
@@ -186,7 +186,7 @@ export const roomEditorSlice = createSlice({
     },
     updateRoomItemTints(
       state,
-      action: PayloadAction<{ index: number; tints: LayerTintData[] }>,
+      action: PayloadAction<{ index: number; tints: ChannelTintData[] }>,
     ) {
       const item = state.roomItems[action.payload.index];
       if (item) item.tints = action.payload.tints;

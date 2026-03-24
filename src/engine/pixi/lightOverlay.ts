@@ -1,4 +1,4 @@
-import type { RenderContext } from "../event";
+import type { Sprite, Texture } from "pixi.js";
 import type { AttributeMap } from "../state/attributes";
 import {
   MAX_LIGHT,
@@ -7,47 +7,58 @@ import {
 } from "../state/light";
 
 /**
- * Cache for the light overlay canvas.
+ * Pixi-based light overlay. Maintains an OffscreenCanvas that gets
+ * rebuilt when dirty, then pushed to a pixi Sprite texture.
  */
-export class LightOverlayCache {
+export class PixiLightOverlay {
   private canvas: OffscreenCanvas | null = null;
+  private _sprite: Sprite | null = null;
+  private _texture: Texture | null = null;
   dirty = true;
 
+  /** Get or create the pixi sprite. Must be added to the scene. */
+  async getSprite(): Promise<Sprite> {
+    if (this._sprite) return this._sprite;
+
+    const { Sprite: PixiSprite, Texture: PixiTexture } = await import("pixi.js");
+    // Start with empty 1x1 texture; will be replaced on first update
+    this._texture = PixiTexture.from(new OffscreenCanvas(1, 1));
+    this._sprite = new PixiSprite(this._texture);
+    return this._sprite;
+  }
+
   /**
-   * Rebuild the light overlay from the attribute map, then draw it.
+   * Update the overlay for the current frame.
+   * Rebuilds the light canvas if dirty, then updates the sprite texture.
    */
-  draw(
-    ctx: RenderContext,
+  async update(
     map: AttributeMap,
     tileSize: number,
-  ): void {
+  ): Promise<void> {
     const { width, height } = map;
     if (width === 0 || height === 0) return;
-
-    // No light attribute data — skip overlay
     if (!map.has("light")) return;
+
+    const sprite = await this.getSprite();
 
     if (this.dirty) {
       this.rebuild(map, width, height);
       this.dirty = false;
+
+      if (this.canvas) {
+        const { Texture } = await import("pixi.js");
+        // Replace texture with the rebuilt canvas
+        if (this._texture) this._texture.destroy();
+        this._texture = Texture.from(this.canvas);
+        sprite.texture = this._texture;
+      }
     }
 
-    if (!this.canvas) return;
-
-    ctx.save();
-    (ctx as CanvasRenderingContext2D).imageSmoothingEnabled = false;
-    ctx.drawImage(
-      this.canvas,
-      0,
-      0,
-      this.canvas.width,
-      this.canvas.height,
-      0,
-      0,
-      width * tileSize,
-      height * tileSize,
-    );
-    ctx.restore();
+    // Scale to cover the room
+    sprite.width = width * tileSize;
+    sprite.height = height * tileSize;
+    sprite.x = 0;
+    sprite.y = 0;
   }
 
   private rebuild(
@@ -84,6 +95,14 @@ export class LightOverlayCache {
     const offCtx = this.canvas.getContext("2d")!;
     offCtx.clearRect(0, 0, canvasW, canvasH);
     offCtx.putImageData(imageData, 0, 0);
+  }
+
+  destroy(): void {
+    if (this._texture) this._texture.destroy();
+    if (this._sprite) this._sprite.destroy();
+    this._texture = null;
+    this._sprite = null;
+    this.canvas = null;
   }
 }
 

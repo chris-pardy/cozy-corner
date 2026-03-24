@@ -4,11 +4,11 @@
   "defs": {
     "main": {
       "type": "record",
-      "description": "A wearable overlay for avatars. Provides directional sprite sheets with walk animation frames. Can be created by any user and equipped by others. Compositing z-order is determined by position in the avatar's wearable list, not by the wearable itself.",
+      "description": "A wearable overlay for avatars. Authored against a specific base avatar whose animation targets it must match. Can be created by any user and equipped by others. Compositing z-order is determined by position in the avatar's wearable list, not by the wearable itself.",
       "key": "tid",
       "record": {
         "type": "object",
-        "required": ["name", "spriteSheet", "layers", "createdAt"],
+        "required": ["name", "spriteSheet", "layers", "baseAvatar", "createdAt"],
         "properties": {
           "name": {
             "type": "string",
@@ -62,10 +62,10 @@
             },
             "maxLength": 32
           },
-          "previewBase": {
+          "baseAvatar": {
             "type": "ref",
             "ref": "com.atproto.repo.strongRef",
-            "description": "Optional strong reference to a base avatar record used for previewing this wearable."
+            "description": "Strong reference to the base avatar record this wearable is authored against. The wearable's animation layers must match the base avatar's well-known targets."
           },
           "createdAt": {
             "type": "string",

@@ -22,10 +22,6 @@
         "height": {
           "type": "integer",
           "description": "Source height in sprite sheet"
-        },
-        "transform": {
-          "type": "ref",
-          "ref": "#transform"
         }
       }
     },
@@ -36,8 +32,30 @@
       "properties": {
         "target": {
           "type": "string",
-          "description": "The state of the avatar or wearable, or the variant of the item. Values like 'idle', 'walk', 'sit'.",
-          "knownValues": ["idle-north", "walk-south", "sit"]
+          "description": "Animation state identifier. For base avatars and wearables, use the well-known directional targets: walk-south, walk-north, walk-east, walk-west, sit-south, sit-north, sit-east, sit-west, hold-south, hold-north, hold-east, hold-west, push-south, push-north, push-east, push-west, pickup-south, pickup-north, pickup-east, pickup-west, and dance. Frame count and frame rate are defined per layer — authors choose their own animation detail level. For items, this is the variant name.",
+          "knownValues": [
+            "walk-south",
+            "walk-north",
+            "walk-east",
+            "walk-west",
+            "sit-south",
+            "sit-north",
+            "sit-east",
+            "sit-west",
+            "hold-south",
+            "hold-north",
+            "hold-east",
+            "hold-west",
+            "push-south",
+            "push-north",
+            "push-east",
+            "push-west",
+            "pickup-south",
+            "pickup-north",
+            "pickup-east",
+            "pickup-west",
+            "dance"
+          ]
         },
         "layerName": {
           "type": "string",
@@ -55,25 +73,36 @@
           "type": "integer",
           "description": "The frame rate in milliseconds per frame",
           "default": 24
+        },
+        "zIndex": {
+          "type": "integer",
+          "description": "Draw order relative to the entity. 0 = behind (default), 1 = in front. For furniture this allows parts like armrests to draw over the avatar.",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 1
+        },
+        "colorChannel": {
+          "type": "string",
+          "description": "Optional color channel name for tint customization. Layers sharing the same channel name are tinted together. When present, the user can customize the tint color for this channel. When omitted, the layer is not user-customizable.",
+          "maxLength": 640,
+          "maxGraphemes": 64
         }
       }
     },
-    "layerTint": {
+    "channelTint": {
       "type": "object",
-      "description": "A tint for a layer",
-      "required": ["layerIndexes", "tint"],
+      "description": "A tint for a color channel. All animation layers sharing the same colorChannel name are tinted together.",
+      "required": ["channel", "tint"],
       "properties": {
-        "layerIndexes": {
-          "type": "array",
-          "description": "The indexes of the layers to tint",
-          "items": {
-            "type": "integer",
-            "description": "The index of the layer to tint"
-          }
+        "channel": {
+          "type": "string",
+          "description": "The color channel name. Must match a colorChannel value on one or more animation layers.",
+          "maxLength": 640,
+          "maxGraphemes": 64
         },
         "tint": {
           "type": "string",
-          "description": "Hex color to tint the layer (e.g. '#cc4444'). Must be a '#' followed by 3 or 6 hex digits. If omitted, layer renders as-is.",
+          "description": "Hex color to tint the channel (e.g. '#cc4444'). Must be a '#' followed by 3 or 6 hex digits.",
           "maxLength": 7
         }
       }
@@ -124,7 +153,15 @@
           "description": "The attribute name.",
           "maxLength": 640,
           "maxGraphemes": 64,
-          "knownValues": ["light", "heat", "food", "water", "comfort", "noise", "people"]
+          "knownValues": [
+            "light",
+            "heat",
+            "food",
+            "water",
+            "comfort",
+            "noise",
+            "people"
+          ]
         },
         "value": {
           "type": "integer",
@@ -147,7 +184,14 @@
         "type": {
           "type": "string",
           "description": "Value type. Controls editor widget and serialisation.",
-          "knownValues": ["string", "integer", "blob", "direction", "edges", "attribute"]
+          "knownValues": [
+            "string",
+            "integer",
+            "blob",
+            "direction",
+            "edges",
+            "attribute"
+          ]
         },
         "default": {
           "type": "string",
@@ -177,7 +221,15 @@
         "blob": {
           "type": "blob",
           "description": "Blob value for blob-typed properties.",
-          "accept": ["image/png", "image/webp", "image/jpeg", "video/mp4", "audio/mpeg", "audio/ogg", "audio/wav"],
+          "accept": [
+            "image/png",
+            "image/webp",
+            "image/jpeg",
+            "video/mp4",
+            "audio/mpeg",
+            "audio/ogg",
+            "audio/wav"
+          ],
           "maxSize": 5000000
         }
       }
@@ -195,7 +247,13 @@
         "category": {
           "type": "string",
           "description": "The category of the entry.",
-          "knownValues": ["item", "wearable", "tileset", "baseAvatar", "critter"]
+          "knownValues": [
+            "item",
+            "wearable",
+            "tileset",
+            "baseAvatar",
+            "critter"
+          ]
         }
       }
     }

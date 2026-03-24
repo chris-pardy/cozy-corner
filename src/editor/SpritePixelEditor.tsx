@@ -6,6 +6,7 @@ import {
   toolFootprint,
   bresenham,
   floodFill,
+  scale2x,
 } from "./sprite-drawing";
 import {
   SpriteEditorProvider,
@@ -81,6 +82,8 @@ const TOOLS: { id: Tool; label: string; icon: string }[] = [
   { id: "fill", label: "Fill", icon: "\u25C6" },
   { id: "eraser", label: "Eraser", icon: "\u25FB" },
   { id: "move", label: "Move", icon: "\u271B" },
+  { id: "scale", label: "Scale", icon: "\u2922" },
+  { id: "rotate", label: "Rotate", icon: "\u21BB" },
 ];
 
 const MOVE_HANDLE_SIZE = 8;
@@ -846,6 +849,71 @@ function SpritePixelEditorInner({
   const scaledW = canvasW * zoom;
   const scaledH = canvasH * zoom;
 
+  // ── RotSprite preview cache ──
+  // Pre-compute the pixel-art rotation so the canvas draw just blits it.
+  const rotPreviewRef = useRef<OffscreenCanvas | null>(null);
+  useEffect(() => {
+    if (tool !== "rotate" || rotAngle === 0) {
+      rotPreviewRef.current = null;
+      return;
+    }
+    const backing = backingRef.current;
+    const ctx = backing.getContext("2d")!;
+    const xOff = currentFrame * canvasW;
+    const yOff = activeLayerId * canvasH;
+
+    // Extract the active layer cell
+    let imgData = ctx.getImageData(xOff, yOff, canvasW, canvasH);
+
+    // 8x upscale via 3 rounds of Scale2x
+    for (let i = 0; i < 3; i++) imgData = scale2x(imgData);
+    const uw = canvasW * 8;
+    const uh = canvasH * 8;
+
+    const upCanvas = new OffscreenCanvas(uw, uh);
+    upCanvas.getContext("2d")!.putImageData(imgData, 0, 0);
+
+    // Rotate at high res
+    const rotCanvas = new OffscreenCanvas(uw, uh);
+    const rotCtx = rotCanvas.getContext("2d")!;
+    rotCtx.translate(uw / 2, uh / 2);
+    rotCtx.rotate((rotAngle * Math.PI) / 180);
+    rotCtx.imageSmoothingEnabled = false;
+    rotCtx.drawImage(upCanvas, -uw / 2, -uh / 2);
+
+    // Downscale back to original size
+    const result = new OffscreenCanvas(canvasW, canvasH);
+    const rCtx = result.getContext("2d")!;
+    rCtx.imageSmoothingEnabled = false;
+    rCtx.drawImage(rotCanvas, 0, 0, canvasW, canvasH);
+
+    rotPreviewRef.current = result;
+  }, [tool, rotAngle, currentFrame, activeLayerId, canvasW, canvasH, version]);
+
+  // ── Scale preview cache ──
+  // Pre-compute nearest-neighbor scaled image for the scale tool.
+  const scalePreviewRef = useRef<OffscreenCanvas | null>(null);
+  useEffect(() => {
+    if (tool !== "scale" || (tfX === 0 && tfY === 0 && tfW === canvasW && tfH === canvasH)) {
+      scalePreviewRef.current = null;
+      return;
+    }
+    const backing = backingRef.current;
+    const xOff = currentFrame * canvasW;
+    const yOff = activeLayerId * canvasH;
+
+    const result = new OffscreenCanvas(canvasW, canvasH);
+    const rCtx = result.getContext("2d")!;
+    rCtx.imageSmoothingEnabled = false;
+    rCtx.drawImage(
+      backing,
+      xOff, yOff, canvasW, canvasH,
+      tfX, tfY, tfW, tfH,
+    );
+
+    scalePreviewRef.current = result;
+  }, [tool, tfX, tfY, tfW, tfH, currentFrame, activeLayerId, canvasW, canvasH, version]);
+
   // ── Coordinate helpers ──
 
   const eventToPixel = useCallback(
@@ -902,7 +970,8 @@ function SpritePixelEditorInner({
   const handleMouseDown = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       if (e.button !== 0) return;
-      if (store.getState().editor.tool === "move") return;
+      const currentTool = store.getState().editor.tool;
+      if (currentTool === "move" || currentTool === "scale" || currentTool === "rotate") return;
       const p = eventToPixel(e);
       if (!p) return;
       paintingRef.current = true;
@@ -915,7 +984,8 @@ function SpritePixelEditorInner({
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (store.getState().editor.tool === "move") return;
+      const moveTool = store.getState().editor.tool;
+      if (moveTool === "move" || moveTool === "scale" || moveTool === "rotate") return;
       const p = eventToPixel(e);
       setHoverPixel(p);
       if (!paintingRef.current || !p) return;
@@ -936,11 +1006,102 @@ function SpritePixelEditorInner({
     lastPixelRef.current = null;
   }, []);
 
+  // ── Rotate tool state ──
+  const rotDragRef = useRef<{ startAngle: number; startRot: number } | null>(null);
+
+  /** Get angle in degrees from canvas center to a screen point. */
+  const screenToAngle = useCallback(
+    (clientX: number, clientY: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return 0;
+      const rect = canvas.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      return (Math.atan2(clientY - cy, clientX - cx) * 180) / Math.PI;
+    },
+    [],
+  );
+
+  const handleRotatePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      if (tool !== "rotate" || e.button !== 0) return;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const angle = screenToAngle(e.clientX, e.clientY);
+      rotDragRef.current = { startAngle: angle, startRot: rotAngle };
+      canvas.setPointerCapture(e.pointerId);
+    },
+    [tool, screenToAngle, rotAngle],
+  );
+
+  const handleRotatePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      if (tool !== "rotate") return;
+      const drag = rotDragRef.current;
+      if (!drag) return;
+      const angle = screenToAngle(e.clientX, e.clientY);
+      const delta = angle - drag.startAngle;
+      let next = Math.round(drag.startRot + delta);
+      // Normalize to -180..180
+      while (next > 180) next -= 360;
+      while (next < -180) next += 360;
+      dispatch(setRotAngle(next));
+    },
+    [tool, screenToAngle, dispatch],
+  );
+
+  const handleRotatePointerUp = useCallback(() => {
+    rotDragRef.current = null;
+  }, []);
+
   // ── Move tool pointer handlers (use pointer capture for drags beyond canvas) ──
+
+  // ── Move tool: translate only ──
 
   const handleMovePointerDown = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>) => {
       if (tool !== "move" || e.button !== 0) return;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      moveDragRef.current = {
+        type: "translate", startX: e.clientX, startY: e.clientY,
+        origX: tfX, origY: tfY, origW: tfW, origH: tfH,
+        anchorX: 0, anchorY: 0,
+      };
+      canvas.setPointerCapture(e.pointerId);
+    },
+    [tool, tfX, tfY, tfW, tfH],
+  );
+
+  const handleMovePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      if (tool !== "move") return;
+      const drag = moveDragRef.current;
+      if (!drag) return;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ss = canvas.getBoundingClientRect().width / canvasW;
+      const nx = drag.origX + Math.round((e.clientX - drag.startX) / ss);
+      const ny = drag.origY + Math.round((e.clientY - drag.startY) / ss);
+      dispatch(setTransformRect({ x: nx, y: ny, w: drag.origW, h: drag.origH }));
+    },
+    [tool, canvasW, dispatch],
+  );
+
+  const handleMovePointerUp = useCallback(() => {
+    moveDragRef.current = null;
+  }, []);
+
+  // ── Scale tool: corner-drag resize ──
+
+  const scaleDragRef = useRef<{
+    startX: number; startY: number;
+    anchorX: number; anchorY: number;
+  } | null>(null);
+
+  const handleScalePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLCanvasElement>) => {
+      if (tool !== "scale" || e.button !== 0) return;
       const canvas = canvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
@@ -956,39 +1117,24 @@ function SpritePixelEditorInner({
       ];
       const OPP = [3, 2, 1, 0];
 
-      // Hit test corner handles
       for (let i = 0; i < 4; i++) {
         if (Math.abs(sx - corners[i][0]) <= MOVE_HIT_RADIUS && Math.abs(sy - corners[i][1]) <= MOVE_HIT_RADIUS) {
           const oi = OPP[i];
-          moveDragRef.current = {
-            type: "scale", startX: sx, startY: sy,
-            origX: tfX, origY: tfY, origW: tfW, origH: tfH,
+          scaleDragRef.current = {
+            startX: sx, startY: sy,
             anchorX: corners[oi][0] / ss, anchorY: corners[oi][1] / ss,
           };
           canvas.setPointerCapture(e.pointerId);
           return;
         }
       }
-      // Hit test body
-      const bx0 = Math.min(corners[0][0], corners[3][0]);
-      const bx1 = Math.max(corners[0][0], corners[3][0]);
-      const by0 = Math.min(corners[0][1], corners[3][1]);
-      const by1 = Math.max(corners[0][1], corners[3][1]);
-      if (sx >= bx0 && sx <= bx1 && sy >= by0 && sy <= by1) {
-        moveDragRef.current = {
-          type: "translate", startX: sx, startY: sy,
-          origX: tfX, origY: tfY, origW: tfW, origH: tfH,
-          anchorX: 0, anchorY: 0,
-        };
-        canvas.setPointerCapture(e.pointerId);
-      }
     },
     [tool, canvasW, tfX, tfY, tfW, tfH],
   );
 
-  const handleMovePointerMove = useCallback(
+  const handleScalePointerMove = useCallback(
     (e: React.PointerEvent<HTMLCanvasElement>) => {
-      if (tool !== "move") return;
+      if (tool !== "scale") return;
       const canvas = canvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
@@ -996,26 +1142,20 @@ function SpritePixelEditorInner({
       const sy = e.clientY - rect.top;
       const ss = rect.width / canvasW;
 
-      const drag = moveDragRef.current;
+      const drag = scaleDragRef.current;
       if (drag) {
-        if (drag.type === "translate") {
-          const nx = drag.origX + Math.round((sx - drag.startX) / ss);
-          const ny = drag.origY + Math.round((sy - drag.startY) / ss);
-          dispatch(setTransformRect({ x: nx, y: ny, w: tfW, h: tfH }));
-        } else {
-          const spriteX = sx / ss;
-          const spriteY = sy / ss;
-          let nw = Math.round(spriteX - drag.anchorX);
-          let nh = Math.round(spriteY - drag.anchorY);
-          let nx = Math.round(drag.anchorX);
-          let ny = Math.round(drag.anchorY);
-          if (nw < 0) { nx += nw; nw = -nw; }
-          if (nh < 0) { ny += nh; nh = -nh; }
-          dispatch(setTransformRect({ x: nx, y: ny, w: Math.max(1, nw), h: Math.max(1, nh) }));
-        }
+        const spriteX = sx / ss;
+        const spriteY = sy / ss;
+        let nw = Math.round(spriteX - drag.anchorX);
+        let nh = Math.round(spriteY - drag.anchorY);
+        let nx = Math.round(drag.anchorX);
+        let ny = Math.round(drag.anchorY);
+        if (nw < 0) { nx += nw; nw = -nw; }
+        if (nh < 0) { ny += nh; nh = -nh; }
+        dispatch(setTransformRect({ x: nx, y: ny, w: Math.max(1, nw), h: Math.max(1, nh) }));
         return;
       }
-      // Cursor update (only when not dragging)
+      // Cursor update
       const corners: [number, number][] = [
         [tfX * ss, tfY * ss],
         [(tfX + tfW) * ss, tfY * ss],
@@ -1029,20 +1169,13 @@ function SpritePixelEditorInner({
           break;
         }
       }
-      if (cursor === "default") {
-        const bx0 = Math.min(corners[0][0], corners[3][0]);
-        const bx1 = Math.max(corners[0][0], corners[3][0]);
-        const by0 = Math.min(corners[0][1], corners[3][1]);
-        const by1 = Math.max(corners[0][1], corners[3][1]);
-        if (sx >= bx0 && sx <= bx1 && sy >= by0 && sy <= by1) cursor = "move";
-      }
       canvas.style.cursor = cursor;
     },
     [tool, canvasW, tfX, tfY, tfW, tfH, dispatch],
   );
 
-  const handleMovePointerUp = useCallback(() => {
-    moveDragRef.current = null;
+  const handleScalePointerUp = useCallback(() => {
+    scaleDragRef.current = null;
   }, []);
 
   // ── Zoom ──
@@ -1137,6 +1270,8 @@ function SpritePixelEditorInner({
 
   const handleDone = useCallback(() => {
     if (!onDone) return;
+    const state = store.getState().editor;
+
     const out = document.createElement("canvas");
     out.width = frameCount * canvasW;
     out.height = canvasH;
@@ -1148,7 +1283,7 @@ function SpritePixelEditorInner({
     const img = new Image();
     img.onload = () => onDone({ image: img, frameWidth: canvasW, frameHeight: canvasH, frameCount, fps: previewFps });
     img.src = out.toDataURL("image/png");
-  }, [onDone, frameCount, canvasW, canvasH, previewFps, compositeFrame]);
+  }, [onDone, frameCount, canvasW, canvasH, previewFps, compositeFrame, store, ops]);
 
   // ── Draw display canvas ──
 
@@ -1185,7 +1320,7 @@ function SpritePixelEditorInner({
 
     // 4. Current frame (all layers bottom→top)
     if (tool === "move") {
-      // Draw non-active layers normally, active layer at transform position
+      // Move tool: active layer translated, others normal
       const backing = backingRef.current;
       const xOff = currentFrame * canvasW;
       for (const layer of layers) {
@@ -1194,8 +1329,40 @@ function SpritePixelEditorInner({
           ctx.drawImage(
             backing,
             xOff, layer.id * canvasH, canvasW, canvasH,
-            tfX * zoom, tfY * zoom, tfW * zoom, tfH * zoom,
+            tfX * zoom, tfY * zoom, canvasW * zoom, canvasH * zoom,
           );
+        } else {
+          ctx.drawImage(
+            backing,
+            xOff, layer.id * canvasH, canvasW, canvasH,
+            0, 0, scaledW, scaledH,
+          );
+        }
+      }
+      // Dashed outline showing layer position
+      ctx.strokeStyle = "rgba(34, 211, 238, 0.8)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.strokeRect(tfX * zoom + 0.5, tfY * zoom + 0.5, canvasW * zoom, canvasH * zoom);
+      ctx.setLineDash([]);
+    } else if (tool === "scale") {
+      // Scale tool: active layer scaled via nearest-neighbor preview
+      const backing = backingRef.current;
+      const xOff = currentFrame * canvasW;
+      for (const layer of layers) {
+        if (!layer.visible) continue;
+        if (layer.id === activeLayerId) {
+          const preview = scalePreviewRef.current;
+          if (preview) {
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(preview, 0, 0, canvasW, canvasH, 0, 0, scaledW, scaledH);
+          } else {
+            ctx.drawImage(
+              backing,
+              xOff, layer.id * canvasH, canvasW, canvasH,
+              0, 0, scaledW, scaledH,
+            );
+          }
         } else {
           ctx.drawImage(
             backing,
@@ -1219,6 +1386,56 @@ function SpritePixelEditorInner({
       for (const [hx, hy] of [[bx, by], [bx + bw, by], [bx, by + bh], [bx + bw, by + bh]]) {
         ctx.fillRect(hx - HS / 2, hy - HS / 2, HS, HS);
       }
+    } else if (tool === "rotate") {
+      // Rotate tool: active layer shown via RotSprite preview
+      const backing = backingRef.current;
+      const xOff = currentFrame * canvasW;
+      for (const layer of layers) {
+        if (!layer.visible) continue;
+        if (layer.id === activeLayerId) {
+          const preview = rotPreviewRef.current;
+          if (preview) {
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(preview, 0, 0, canvasW, canvasH, 0, 0, scaledW, scaledH);
+          } else {
+            // rotAngle === 0: draw unrotated
+            ctx.drawImage(
+              backing,
+              xOff, layer.id * canvasH, canvasW, canvasH,
+              0, 0, scaledW, scaledH,
+            );
+          }
+        } else {
+          ctx.drawImage(
+            backing,
+            xOff, layer.id * canvasH, canvasW, canvasH,
+            0, 0, scaledW, scaledH,
+          );
+        }
+      }
+      // Rotation guide: center dot + angle line
+      const cx = scaledW / 2;
+      const cy = scaledH / 2;
+      const radius = Math.min(scaledW, scaledH) * 0.4;
+      ctx.strokeStyle = "rgba(34, 211, 238, 0.3)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      const rad = (rotAngle * Math.PI) / 180;
+      ctx.strokeStyle = "rgba(34, 211, 238, 0.8)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(rad) * radius, cy + Math.sin(rad) * radius);
+      ctx.stroke();
+      ctx.fillStyle = "#22d3ee";
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(rad) * radius, cy + Math.sin(rad) * radius, 5, 0, Math.PI * 2);
+      ctx.fill();
     } else {
       compositeFrame(ctx, currentFrame, 0, 0, scaledW, scaledH);
     }
@@ -1241,7 +1458,7 @@ function SpritePixelEditorInner({
     }
 
     // 6. Hover footprint (not for move tool)
-    if (hoverPixel && tool !== "move") {
+    if (hoverPixel && tool !== "move" && tool !== "scale" && tool !== "rotate") {
       ctx.fillStyle = "rgba(255, 255, 255, 0.18)";
       for (const p of toolFootprint(tool, hoverPixel.x, hoverPixel.y, toolSize, canvasW, canvasH)) {
         ctx.fillRect(p.x * zoom, p.y * zoom, zoom, zoom);
@@ -1251,13 +1468,13 @@ function SpritePixelEditorInner({
     canvasW, canvasH, gridSize, zoom, scaledW, scaledH,
     hoverPixel, version, tool, toolSize, layers, activeLayerId,
     currentFrame, frameCount, onionPrev, onionNext, compositeFrame, background, showBg,
-    tfX, tfY, tfW, tfH,
+    tfX, tfY, tfW, tfH, rotAngle,
   ]);
 
   // ── Render ──
 
   const activeIdx = layers.findIndex((l: LayerMeta) => l.id === activeLayerId);
-  const showSize = tool !== "fill" && tool !== "move";
+  const showSize = tool !== "fill" && tool !== "move" && tool !== "scale" && tool !== "rotate";
   const frames = Array.from({ length: frameCount }, (_, i) => i);
 
   return (
@@ -1389,24 +1606,44 @@ function SpritePixelEditorInner({
             <span className="spe-tool-label">Flip V</span>
           </button>
         </div>
-        <div className="spe-rotate-row">
-          <input
-            className="ale-num-input"
-            type="number"
-            value={rotAngle}
-            onChange={(e) => {
-              const v = parseInt(e.target.value);
-              if (!isNaN(v)) dispatch(setRotAngle(v));
-            }}
-            style={{ width: 44 }}
-            title="Rotation angle in degrees"
-          />
-          <span className="ale-field-unit">deg</span>
-          <button className="spe-transform-btn" onClick={() => ops.rotspriteRotate()} title={`Rotate ${rotAngle}\u00b0 (RotSprite)`} style={{ flex: 1 }}>
-            <span className="spe-transform-icon">{"\u21BB"}</span>
-            <span className="spe-tool-label">Rotate</span>
-          </button>
-        </div>
+
+        {/* Rotate tool controls */}
+        {tool === "rotate" && (
+          <>
+            <div className="spe-rotate-row">
+              <input
+                className="ale-num-input"
+                type="number"
+                value={rotAngle}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value);
+                  if (!isNaN(v)) dispatch(setRotAngle(v));
+                }}
+                style={{ width: 52 }}
+                title="Rotation angle in degrees"
+              />
+              <span className="ale-field-unit">deg</span>
+            </div>
+            <div className="spe-transform-actions">
+              <button
+                className="spe-transform-btn"
+                onClick={() => { ops.rotspriteRotate(); dispatch(setRotAngle(0)); }}
+                title={`Apply ${rotAngle}\u00b0 rotation (RotSprite)`}
+              >
+                Apply
+              </button>
+              <button
+                className="spe-transform-btn"
+                onClick={() => dispatch(setRotAngle(0))}
+                title="Reset angle to 0"
+              >
+                Reset
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Move tool controls */}
         {tool === "move" && (
           <>
             <div className="spe-field-row" style={{ marginTop: 4 }}>
@@ -1431,7 +1668,21 @@ function SpritePixelEditorInner({
                 <span className="ale-field-unit">px</span>
               </div>
             </div>
-            <div className="spe-field-row">
+            <div className="spe-transform-actions">
+              <button className="spe-transform-btn" onClick={() => ops.applyTransform()} title="Apply position">
+                Apply
+              </button>
+              <button className="spe-transform-btn" onClick={() => dispatch(resetTransformRect())} title="Reset position">
+                Reset
+              </button>
+            </div>
+          </>
+        )}
+
+        {/* Scale tool controls */}
+        {tool === "scale" && (
+          <>
+            <div className="spe-field-row" style={{ marginTop: 4 }}>
               <div className="ale-field">
                 <span className="ale-field-label">W</span>
                 <input
@@ -1456,10 +1707,10 @@ function SpritePixelEditorInner({
               </div>
             </div>
             <div className="spe-transform-actions">
-              <button className="spe-transform-btn" onClick={() => ops.applyTransform()} title="Apply scale and position">
+              <button className="spe-transform-btn" onClick={() => ops.applyTransform()} title="Apply scale">
                 Apply
               </button>
-              <button className="spe-transform-btn" onClick={() => dispatch(resetTransformRect())} title="Reset to original size and position">
+              <button className="spe-transform-btn" onClick={() => dispatch(resetTransformRect())} title="Reset scale">
                 Reset
               </button>
             </div>
@@ -1516,83 +1767,103 @@ function SpritePixelEditorInner({
 
         {/* Canvas viewport */}
         <div className="spe-viewport" ref={viewportRef}>
-          <canvas
-            ref={canvasRef}
-            className="ale-canvas"
-            style={{ width: scaledW, height: scaledH, touchAction: tool === "move" ? "none" : undefined }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={stopPainting}
-            onMouseLeave={() => {
-              setHoverPixel(null);
-              stopPainting();
-              if (canvasRef.current) canvasRef.current.style.cursor = "default";
-            }}
-            onPointerDown={handleMovePointerDown}
-            onPointerMove={handleMovePointerMove}
-            onPointerUp={handleMovePointerUp}
-          />
+          <div style={{ position: "relative", width: scaledW, height: scaledH }}>
+            <canvas
+              ref={canvasRef}
+              className="ale-canvas"
+              style={{
+                width: scaledW,
+                height: scaledH,
+                touchAction: tool === "move" || tool === "scale" || tool === "rotate" ? "none" : undefined,
+                cursor: tool === "rotate" ? "grab" : tool === "move" ? "move" : undefined,
+              }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={stopPainting}
+              onMouseLeave={() => {
+                setHoverPixel(null);
+                stopPainting();
+                if (canvasRef.current) canvasRef.current.style.cursor =
+                  tool === "rotate" ? "grab" : tool === "move" ? "move" : "default";
+              }}
+              onPointerDown={(e) => {
+                handleMovePointerDown(e);
+                handleScalePointerDown(e);
+                handleRotatePointerDown(e);
+              }}
+              onPointerMove={(e) => {
+                handleMovePointerMove(e);
+                handleScalePointerMove(e);
+                handleRotatePointerMove(e);
+              }}
+              onPointerUp={() => {
+                handleMovePointerUp();
+                handleScalePointerUp();
+                handleRotatePointerUp();
+              }}
+            />
+          </div>
         </div>
 
         {/* Frame strip */}
-        <div className="spe-frame-strip">
-          {/* eslint-disable-next-line react-hooks/refs */}
-          {frames.map((f) => (
-            <div
-              key={f}
-              className={`spe-frame-cell${f === currentFrame ? " spe-frame-cell--active" : ""}`}
-              onClick={() => dispatch(setCurrentFrame(f))}
-            >
-              <FrameThumb
-                backing={backingRef.current}
-                layers={layers}
-                frame={f}
-                w={canvasW}
-                h={canvasH}
-                version={version}
-                background={background}
-              />
-              <span className="spe-frame-num">{f + 1}</span>
-              {frameCount > 1 && (
+          <div className="spe-frame-strip">
+            {/* eslint-disable-next-line react-hooks/refs */}
+            {frames.map((f) => (
+              <div
+                key={f}
+                className={`spe-frame-cell${f === currentFrame ? " spe-frame-cell--active" : ""}`}
+                onClick={() => dispatch(setCurrentFrame(f))}
+              >
+                <FrameThumb
+                  backing={backingRef.current}
+                  layers={layers}
+                  frame={f}
+                  w={canvasW}
+                  h={canvasH}
+                  version={version}
+                  background={background}
+                />
+                <span className="spe-frame-num">{f + 1}</span>
+                {frameCount > 1 && (
+                  <button
+                    className="spe-frame-delete"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      ops.deleteFrame(f);
+                    }}
+                    title="Delete frame"
+                  >
+                    &times;
+                  </button>
+                )}
+              </div>
+            ))}
+            <button className="spe-frame-add" onClick={() => dispatch(addFrame())} title="Add frame">
+              +
+            </button>
+            {frameCount > 1 && (
+              <>
                 <button
-                  className="spe-frame-delete"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    ops.deleteFrame(f);
-                  }}
-                  title="Delete frame"
+                  className="spe-toggle-btn"
+                  onClick={() => ops.copyPrevFrame()}
+                  disabled={currentFrame <= 0}
+                  title="Copy previous frame (active layer only)"
+                  style={{ marginLeft: 4, alignSelf: "center" }}
                 >
-                  &times;
+                  Copy prev
                 </button>
-              )}
-            </div>
-          ))}
-          <button className="spe-frame-add" onClick={() => dispatch(addFrame())} title="Add frame">
-            +
-          </button>
-          {frameCount > 1 && (
-            <>
-              <button
-                className="spe-toggle-btn"
-                onClick={() => ops.copyPrevFrame()}
-                disabled={currentFrame <= 0}
-                title="Copy previous frame (active layer only)"
-                style={{ marginLeft: 4, alignSelf: "center" }}
-              >
-                Copy prev
-              </button>
-              <button
-                className="spe-toggle-btn"
-                onClick={() => ops.copyPrevFrameAll()}
-                disabled={currentFrame <= 0}
-                title="Copy previous frame (all layers)"
-                style={{ alignSelf: "center" }}
-              >
-                Copy all prev
-              </button>
-            </>
-          )}
-        </div>
+                <button
+                  className="spe-toggle-btn"
+                  onClick={() => ops.copyPrevFrameAll()}
+                  disabled={currentFrame <= 0}
+                  title="Copy previous frame (all layers)"
+                  style={{ alignSelf: "center" }}
+                >
+                  Copy all prev
+                </button>
+              </>
+            )}
+          </div>
 
         {/* Info bar */}
         <div className="ale-info">

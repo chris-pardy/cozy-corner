@@ -1,5 +1,5 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { LayerTint, Transform } from "~/atproto/generated/types/at/cozy-corner/defs";
+import type { ChannelTint, Transform } from "~/atproto/generated/types/at/cozy-corner/defs";
 import type { StateValueData } from "../editor-types";
 
 // ---------------------------------------------------------------------------
@@ -10,7 +10,7 @@ import type { StateValueData } from "../editor-types";
 export interface EquippedEntryData {
   ref: { uri: string; cid: string };
   name: string;
-  tints: LayerTint[];
+  tints: ChannelTint[];
   transform?: Transform;
   state: StateValueData[];
 }
@@ -52,7 +52,7 @@ export const avatarEditorSlice = createSlice({
     setBaseAvatar(state, action: PayloadAction<EquippedEntryData | null>) {
       state.baseAvatar = action.payload;
     },
-    setBaseAvatarTints(state, action: PayloadAction<LayerTint[]>) {
+    setBaseAvatarTints(state, action: PayloadAction<ChannelTint[]>) {
       if (state.baseAvatar) state.baseAvatar.tints = action.payload;
     },
     setBaseAvatarTransform(state, action: PayloadAction<Transform>) {
@@ -82,7 +82,7 @@ export const avatarEditorSlice = createSlice({
     },
     setWearableTints(
       state,
-      action: PayloadAction<{ index: number; tints: LayerTint[] }>,
+      action: PayloadAction<{ index: number; tints: ChannelTint[] }>,
     ) {
       const { index, tints } = action.payload;
       if (state.wearables[index]) state.wearables[index].tints = tints;

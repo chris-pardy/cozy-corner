@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type {
   AnimationLayer,
-  LayerTint,
+  ChannelTint,
   Transform,
 } from "~/atproto/generated/types/at/cozy-corner/defs";
 import type * as Avatar from "~/atproto/generated/types/at/cozy-corner/avatar";
@@ -10,18 +10,7 @@ import {
   defaultAvatarUrl,
   defaultAvatarLayers,
 } from "~/atproto/default-avatar-base";
-import { Entity } from "~/engine/entity";
-import { RenderEvent } from "~/engine/event";
-import { CompositeRenderBehavior } from "~/engine/behaviors/composite-render";
-import { LayerStackRenderBehavior } from "~/engine/behaviors/layer-stack-render";
-import {
-  LAYERS,
-  SPRITE_SHEET,
-  TARGET,
-  TARGET_START_TIME,
-  CHILD_RENDER_CONFIG,
-  type ChildRenderConfig,
-} from "~/engine/state/render";
+import { PixiSpritePreview } from "~/engine/pixi/PixiSpritePreview";
 import { CATEGORY_COLORS } from "~/atproto/inventory";
 import { InventoryCategoryGrid } from "~/atproto/InventoryCategoryGrid";
 import { useInventoryManagement } from "~/atproto/useInventoryManagement";
@@ -97,7 +86,7 @@ function CollectionPage() {
 interface LoadedAvatarLayer {
   image: HTMLImageElement;
   layers: AnimationLayer[];
-  tints: LayerTint[];
+  tints: ChannelTint[];
   transform?: Transform;
 }
 
@@ -113,7 +102,7 @@ const DIRECTION_TARGETS = [
 ] as const;
 
 // ---------------------------------------------------------------------------
-// AvatarPreview — animated composite avatar with rAF loop
+// AvatarPreview — animated composite avatar with pixi
 // ---------------------------------------------------------------------------
 
 function AvatarPreview({
@@ -123,105 +112,18 @@ function AvatarPreview({
   loadedLayers: LoadedAvatarLayer[];
   size?: number;
 }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rootRef = useRef<Entity | null>(null);
-  const rafRef = useRef<number>(0);
   const [activeTarget, setActiveTarget] = useState("idle-south");
-  // eslint-disable-next-line react-hooks/purity
-  const startTimeRef = useRef(performance.now());
 
-  const frameSize = useMemo(() => {
-    let w = 0;
-    let h = 0;
-    for (const loaded of loadedLayers) {
-      for (const layer of loaded.layers) {
-        if (layer.target === activeTarget && layer.frames.length > 0) {
-          w = Math.max(w, layer.frames[0].width);
-          h = Math.max(h, layer.frames[0].height);
-        }
-      }
-    }
-    return { w: w || 32, h: h || 32 };
-  }, [loadedLayers, activeTarget]);
-
-  // Build entity tree when loadedLayers or target changes
-  useEffect(() => {
-    const root = new Entity([new CompositeRenderBehavior()]);
-    const configMap = new Map<Entity, ChildRenderConfig>();
-
-    for (const loaded of loadedLayers) {
-      const child = new Entity([new LayerStackRenderBehavior()]);
-      child.set(LAYERS, loaded.layers);
-      child.set(SPRITE_SHEET, loaded.image);
-      child.set(TARGET, activeTarget);
-      child.set(TARGET_START_TIME, startTimeRef.current);
-      root.addChild(child);
-
-      configMap.set(child, {
-        tints: loaded.tints,
-        transform: loaded.transform,
-      });
-    }
-
-    root.set(CHILD_RENDER_CONFIG, configMap);
-    rootRef.current = root;
-  }, [loadedLayers, activeTarget]);
-
-  // Reset start time when target changes
-  useEffect(() => {
-    startTimeRef.current = performance.now();
-  }, [activeTarget]);
-
-  const scale = Math.max(
-    1,
-    Math.floor(size / Math.max(frameSize.w, frameSize.h)),
+  const previewLayers = useMemo(
+    () =>
+      loadedLayers.map((l) => ({
+        image: l.image,
+        layers: l.layers,
+        tints: l.tints,
+        transform: l.transform,
+      })),
+    [loadedLayers],
   );
-  const cw = frameSize.w * scale;
-  const ch = frameSize.h * scale;
-
-  // rAF draw loop
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    canvas.width = cw;
-    canvas.height = ch;
-
-    function draw(time: number) {
-      if (!ctx) return;
-      ctx.clearRect(0, 0, cw, ch);
-
-      // Checkerboard background
-      const checkSize = scale * 4;
-      for (let cy = 0; cy < ch; cy += checkSize) {
-        for (let cx = 0; cx < cw; cx += checkSize) {
-          ctx.fillStyle =
-            (Math.floor(cx / checkSize) + Math.floor(cy / checkSize)) % 2 === 0
-              ? "#1a2035"
-              : "#141a2e";
-          ctx.fillRect(cx, cy, checkSize, checkSize);
-        }
-      }
-
-      // Render entity tree
-      const root = rootRef.current;
-      if (root) {
-        ctx.save();
-        ctx.imageSmoothingEnabled = false;
-        ctx.scale(scale, scale);
-        root.emit(new RenderEvent(ctx, time));
-        ctx.restore();
-      }
-
-      rafRef.current = requestAnimationFrame(draw);
-    }
-
-    rafRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [cw, ch, scale]);
 
   // Determine which targets are available
   const availableTargets = useMemo(() => {
@@ -237,14 +139,10 @@ function AvatarPreview({
   return (
     <div>
       <div className="border-2 border-border rounded-sm bg-bg-panel p-4 flex items-center justify-center">
-        <canvas
-          ref={canvasRef}
-          style={{
-            display: "block",
-            imageRendering: "pixelated",
-            width: cw,
-            height: ch,
-          }}
+        <PixiSpritePreview
+          previewLayers={previewLayers}
+          target={activeTarget}
+          size={size}
         />
       </div>
 
@@ -331,7 +229,7 @@ function AvatarView({ handle }: { handle: string }) {
               layers.push({
                 image: img,
                 layers: (baseRec.layers ?? []) as AnimationLayer[],
-                tints: (avatarValue.baseAvatarTints ?? []) as LayerTint[],
+                tints: (avatarValue.baseAvatarTints ?? []) as ChannelTint[],
                 transform: avatarValue.baseAvatarTransform as
                   | Transform
                   | undefined,
@@ -344,7 +242,7 @@ function AvatarView({ handle }: { handle: string }) {
           layers.push({
             image: img,
             layers: defaultAvatarLayers,
-            tints: (avatarValue?.baseAvatarTints ?? []) as LayerTint[],
+            tints: (avatarValue?.baseAvatarTints ?? []) as ChannelTint[],
             transform: avatarValue?.baseAvatarTransform as
               | Transform
               | undefined,
@@ -374,7 +272,7 @@ function AvatarView({ handle }: { handle: string }) {
                 layers.push({
                   image: img,
                   layers: (wearableRec.layers ?? []) as AnimationLayer[],
-                  tints: (equipped.tints ?? []) as LayerTint[],
+                  tints: (equipped.tints ?? []) as ChannelTint[],
                   transform: equipped.transform as Transform | undefined,
                 });
               } catch {

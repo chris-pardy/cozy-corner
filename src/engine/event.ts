@@ -54,17 +54,17 @@ export class DataEvent extends Event {
   }
 }
 
-/** Render event carrying canvas context, timestamp, and per-layer tint map. */
+/** Render event carrying canvas context, timestamp, and per-channel tint map. */
 export class RenderEvent extends Event {
   override readonly type = "render";
   readonly ctx: RenderContext;
   readonly time: number;
-  readonly tintMap: ReadonlyMap<number, string>;
+  readonly tintMap: ReadonlyMap<string, string>;
 
   constructor(
     ctx: RenderContext,
     time: number,
-    tintMap: ReadonlyMap<number, string> = new Map(),
+    tintMap: ReadonlyMap<string, string> = new Map(),
   ) {
     super();
     this.ctx = ctx;

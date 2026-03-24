@@ -32,7 +32,7 @@ export interface Main {
   behaviors?: AtCozyCornerScript.Script[]
   /** Declares the configurable state properties for this wearable. Behaviors read these via entityState. */
   stateProperties?: AtCozyCornerDefs.StateProperty[]
-  previewBase?: ComAtprotoRepoStrongRef.Main
+  baseAvatar: ComAtprotoRepoStrongRef.Main
   createdAt: string
   [k: string]: unknown
 }

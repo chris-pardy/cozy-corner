@@ -11,12 +11,12 @@ import {
   type Position,
 } from "../state/movement";
 import { TILE_SIZE } from "../state/tiles";
-import type { LayerTint } from "~/atproto/generated/types/at/cozy-corner/defs";
+import type { ChannelTint } from "~/atproto/generated/types/at/cozy-corner/defs";
 
-function buildTintMap(tints: LayerTint[]): Map<number, string> {
-  const map = new Map<number, string>();
-  for (const { layerIndexes, tint } of tints) {
-    for (const i of layerIndexes) map.set(i, tint);
+function buildChannelTintMap(tints: ChannelTint[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const { channel, tint } of tints) {
+    map.set(channel, tint);
   }
   return map;
 }
@@ -50,8 +50,8 @@ export class CompositeRenderBehavior implements Behavior {
     for (const child of children) {
       const childConfig = config?.get(child);
       const tintMap = childConfig?.tints
-        ? buildTintMap(childConfig.tints)
-        : new Map<number, string>();
+        ? buildChannelTintMap(childConfig.tints)
+        : new Map<string, string>();
 
       ctx.save();
 

@@ -68,6 +68,8 @@ function layer(overrides?: Partial<AnimationLayer>): AnimationLayer {
     target: "idle-south",
     frames: makeFrames(0, 0, 32, 32, 1),
     frameRate: 125,
+    zIndex: 0,
+    colorChannel: "primary",
     ...overrides,
   };
 }
@@ -110,7 +112,7 @@ describe("bakeLayer", () => {
     const result = bakeLayer(
       input({
         image: img,
-        tints: [{ layerIndexes: [0], tint: "#ff0000" }],
+        tints: [{ channel: "primary", tint: "#ff0000" }],
       }),
     );
 
@@ -139,7 +141,7 @@ describe("bakeLayer", () => {
     const result = bakeLayer(
       input({
         layers,
-        tints: [{ layerIndexes: [0], tint: "#ff0000" }],
+        tints: [{ channel: "primary", tint: "#ff0000" }],
       }),
     );
 
@@ -185,7 +187,7 @@ describe("bakeLayer", () => {
     const result = bakeLayer(
       input({
         image: img,
-        tints: [{ layerIndexes: [0], tint: "#ff0000" }],
+        tints: [{ channel: "primary", tint: "#ff0000" }],
       }),
     );
 
@@ -202,7 +204,7 @@ describe("bakeLayer", () => {
     const result = bakeLayer(
       input({
         layers,
-        tints: [{ layerIndexes: [0], tint: "#ff0000" }],
+        tints: [{ channel: "primary", tint: "#ff0000" }],
       }),
     );
 
@@ -239,7 +241,7 @@ describe("bakeLayer", () => {
     const result = bakeLayer(
       input({
         layers: [],
-        tints: [{ layerIndexes: [0], tint: "#ff0000" }],
+        tints: [{ channel: "primary", tint: "#ff0000" }],
       }),
     );
 

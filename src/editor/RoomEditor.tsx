@@ -41,7 +41,7 @@ import {
   removeRoomItem,
   updateRoomItemState,
   updateRoomItemTints,
-  type LayerTintData,
+  type ChannelTintData,
   addRoomCritter,
   removeRoomCritter,
   updateCritterArea,
@@ -1222,17 +1222,12 @@ export function RoomEditor({ uri, editRkey }: { uri?: string; editRkey?: string 
       }
 
       // Items + previews
-      const rawItems = (v.items ?? []) as { item: { uri: string; cid: string }; x: number; y: number; variant?: number; foreground?: number; state?: StateValue[]; tints?: { layerIndexes: number[]; tint: string }[] }[];
+      const rawItems = (v.items ?? []) as { item: { uri: string; cid: string }; x: number; y: number; variant?: number; foreground?: number; state?: StateValue[]; tints?: { channel: string; tint: string }[] }[];
       const loadedItems: RoomItemData[] = [];
       const itemPreviews = new Map<string, RecordPreviewData>();
       for (const ri of rawItems) {
         const state = (ri.state ?? []).map((sv: StateValue) => ({ name: sv.name, value: sv.value ?? "" }));
-        const tints: LayerTintData[] = [];
-        for (const lt of ri.tints ?? []) {
-          for (const idx of lt.layerIndexes) {
-            tints.push({ layerIndex: idx, tint: lt.tint });
-          }
-        }
+        const tints: ChannelTintData[] = (ri.tints ?? []).map((ct) => ({ channel: ct.channel, tint: ct.tint }));
         const item: RoomItemData = { item: ri.item, x: ri.x ?? 0, y: ri.y ?? 0, variant: ri.variant ?? 0, foreground: ri.foreground ?? 0, state, tints };
         try {
           const p = await loadRecordPreview(session.pds, ri.item);
@@ -1415,7 +1410,7 @@ function RoomEditorInner({ uri, editRkey, initialTileset, initialItemPreviews, i
   const [showItemPicker, setShowItemPicker] = useState(false);
   const [pendingItem, setPendingItem] = useState<StrongRef | null>(null);
   const [pendingVariant, setPendingVariant] = useState(0);
-  const [pendingTints, setPendingTints] = useState<LayerTintData[]>([]);
+  const [pendingTints, setPendingTints] = useState<ChannelTintData[]>([]);
   const [selectedItemIdx, setSelectedItemIdx] = useState<number | null>(null);
 
   // Critter picker / selection
@@ -1789,7 +1784,7 @@ function RoomEditorInner({ uri, editRkey, initialTileset, initialItemPreviews, i
         ...(t.transform ? { transform: t.transform } : {}),
         ...(t.renderLayer ? { renderLayer: t.renderLayer } : {}),
         ...(t.layerName ? { layerName: t.layerName } : {}),
-        ...(t.tint ? { tints: [{ $type: "at.cozy-corner.defs#layerTint" as const, layerIndexes: [0], tint: t.tint }] } : {}),
+        ...(t.tint ? { tints: [{ $type: "at.cozy-corner.defs#channelTint" as const, channel: "primary", tint: t.tint }] } : {}),
       }));
 
       const exitRecords = st.exits.map((e: RoomExitData) => ({
@@ -1821,17 +1816,11 @@ function RoomEditorInner({ uri, editRkey, initialTileset, initialItemPreviews, i
       // Items
       const itemRecords = st.roomItems.map((it: RoomItemData) => {
         const stateValues = it.state.filter((s: StateValueData) => s.value !== "");
-        // Group per-layer tints into LayerTint records (one per unique color)
-        const tintMap = new Map<string, number[]>();
-        for (const lt of it.tints) {
-          const existing = tintMap.get(lt.tint);
-          if (existing) existing.push(lt.layerIndex);
-          else tintMap.set(lt.tint, [lt.layerIndex]);
-        }
-        const tintRecords = [...tintMap.entries()].map(([tint, layerIndexes]) => ({
-          $type: "at.cozy-corner.defs#layerTint" as const,
-          layerIndexes,
-          tint,
+        // Write ChannelTint records
+        const tintRecords = it.tints.map((ct) => ({
+          $type: "at.cozy-corner.defs#channelTint" as const,
+          channel: ct.channel,
+          tint: ct.tint,
         }));
         return {
           $type: "at.cozy-corner.house.room#roomItem" as const,
@@ -2081,40 +2070,44 @@ function RoomEditorInner({ uri, editRkey, initialTileset, initialItemPreviews, i
                         </div>
                       )}
 
-                      {/* Layer tints */}
-                      {preview.layers.length > 0 && (
-                        <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
-                          <div style={{ fontSize: 8, color: "var(--text-muted)", fontFamily: "'Pixelify Sans'" }}>Layer Tints</div>
-                          {preview.layers.map((layer, li) => {
-                            const existing = pendingTints.find((t) => t.layerIndex === li);
-                            return (
-                              <div key={li} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                  <span style={{ fontSize: 8, color: "var(--text-muted)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                    {layer.layerName || layer.target}
-                                  </span>
-                                  {existing && (
-                                    <button
-                                      onClick={() => setPendingTints((prev) => prev.filter((t) => t.layerIndex !== li))}
-                                      style={{ fontSize: 8, background: "none", border: "none", color: "var(--clr-error)", cursor: "pointer", padding: 0 }}
-                                    >Reset</button>
-                                  )}
+                      {/* Channel tints */}
+                      {(() => {
+                        const channels = Array.from(new Set(preview.layers.map((l) => l.colorChannel).filter((c): c is string => !!c)));
+                        if (channels.length === 0) return null;
+                        return (
+                          <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+                            <div style={{ fontSize: 8, color: "var(--text-muted)", fontFamily: "'Pixelify Sans'" }}>Channel Tints</div>
+                            {channels.map((channel) => {
+                              const existing = pendingTints.find((t) => t.channel === channel);
+                              return (
+                                <div key={channel} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                    <span style={{ fontSize: 8, color: "var(--text-muted)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                      {channel}
+                                    </span>
+                                    {existing && (
+                                      <button
+                                        onClick={() => setPendingTints((prev) => prev.filter((t) => t.channel !== channel))}
+                                        style={{ fontSize: 8, background: "none", border: "none", color: "var(--clr-error)", cursor: "pointer", padding: 0 }}
+                                      >Reset</button>
+                                    )}
+                                  </div>
+                                  <ColorPicker
+                                    value={existing?.tint ?? "#ffffff"}
+                                    onChange={(color) => {
+                                      setPendingTints((prev) => {
+                                        const filtered = prev.filter((t) => t.channel !== channel);
+                                        if (color !== "#ffffff") filtered.push({ channel, tint: color });
+                                        return filtered;
+                                      });
+                                    }}
+                                  />
                                 </div>
-                                <ColorPicker
-                                  value={existing?.tint ?? "#ffffff"}
-                                  onChange={(color) => {
-                                    setPendingTints((prev) => {
-                                      const filtered = prev.filter((t) => t.layerIndex !== li);
-                                      if (color !== "#ffffff") filtered.push({ layerIndex: li, tint: color });
-                                      return filtered;
-                                    });
-                                  }}
-                                />
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </div>
                   )}
 
@@ -2149,46 +2142,50 @@ function RoomEditorInner({ uri, editRkey, initialTileset, initialItemPreviews, i
                                     />
                                   );
                                 })}
-                                {/* Per-layer tints */}
-                                {it._layers.length > 0 && (
-                                  <>
-                                    <div style={{ fontSize: 8, color: "var(--text-muted)", fontFamily: "'Pixelify Sans'" }}>Layer Tints</div>
-                                    {it._layers.map((layer, li) => {
-                                      const existing = it.tints.find((t) => t.layerIndex === li);
-                                      return (
-                                        <div key={li} onClick={(e) => e.stopPropagation()} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                                          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                                            <span style={{ fontSize: 8, color: "var(--text-muted)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                              {layer.layerName || layer.target}
-                                            </span>
-                                            {existing && (
-                                              <button
-                                                onClick={() => {
-                                                  const st = store.getState().editor;
-                                                  const item = st.roomItems[i];
-                                                  if (!item) return;
-                                                  dispatch(updateRoomItemTints({ index: i, tints: item.tints.filter((t: LayerTintData) => t.layerIndex !== li) }));
-                                                }}
-                                                style={{ fontSize: 8, background: "none", border: "none", color: "var(--clr-error)", cursor: "pointer", padding: 0 }}
-                                              >Reset</button>
-                                            )}
+                                {/* Per-channel tints */}
+                                {(() => {
+                                  const channels = Array.from(new Set(it._layers.map((l: AnimationLayer) => l.colorChannel).filter((c): c is string => !!c)));
+                                  if (channels.length === 0) return null;
+                                  return (
+                                    <>
+                                      <div style={{ fontSize: 8, color: "var(--text-muted)", fontFamily: "'Pixelify Sans'" }}>Channel Tints</div>
+                                      {channels.map((channel) => {
+                                        const existing = it.tints.find((t: ChannelTintData) => t.channel === channel);
+                                        return (
+                                          <div key={channel} onClick={(e) => e.stopPropagation()} style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                              <span style={{ fontSize: 8, color: "var(--text-muted)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                {channel}
+                                              </span>
+                                              {existing && (
+                                                <button
+                                                  onClick={() => {
+                                                    const st = store.getState().editor;
+                                                    const item = st.roomItems[i];
+                                                    if (!item) return;
+                                                    dispatch(updateRoomItemTints({ index: i, tints: item.tints.filter((t: ChannelTintData) => t.channel !== channel) }));
+                                                  }}
+                                                  style={{ fontSize: 8, background: "none", border: "none", color: "var(--clr-error)", cursor: "pointer", padding: 0 }}
+                                                >Reset</button>
+                                              )}
+                                            </div>
+                                            <ColorPicker
+                                              value={existing?.tint ?? "#ffffff"}
+                                              onChange={(color) => {
+                                                const st = store.getState().editor;
+                                                const item = st.roomItems[i];
+                                                if (!item) return;
+                                                const tints = item.tints.filter((t: ChannelTintData) => t.channel !== channel);
+                                                if (color !== "#ffffff") tints.push({ channel, tint: color });
+                                                dispatch(updateRoomItemTints({ index: i, tints }));
+                                              }}
+                                            />
                                           </div>
-                                          <ColorPicker
-                                            value={existing?.tint ?? "#ffffff"}
-                                            onChange={(color) => {
-                                              const st = store.getState().editor;
-                                              const item = st.roomItems[i];
-                                              if (!item) return;
-                                              const tints = item.tints.filter((t: LayerTintData) => t.layerIndex !== li);
-                                              if (color !== "#ffffff") tints.push({ layerIndex: li, tint: color });
-                                              dispatch(updateRoomItemTints({ index: i, tints }));
-                                            }}
-                                          />
-                                        </div>
-                                      );
-                                    })}
-                                  </>
-                                )}
+                                        );
+                                      })}
+                                    </>
+                                  );
+                                })()}
                               </div>
                             )}
                           </div>

@@ -20,7 +20,7 @@
             "description": "Tints for the base avatar layers",
             "items": {
               "type": "ref",
-              "ref": "at.cozy-corner.defs#layerTint"
+              "ref": "at.cozy-corner.defs#channelTint"
             }
           },
           "baseAvatarTransform": {
@@ -59,7 +59,7 @@
           "description": "Tints for the wearable layers",
           "items": {
             "type": "ref",
-            "ref": "at.cozy-corner.defs#layerTint"
+            "ref": "at.cozy-corner.defs#channelTint"
           }
         },
         "transform": {

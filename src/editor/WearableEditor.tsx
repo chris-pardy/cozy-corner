@@ -91,30 +91,30 @@ export function WearableEditor({ uri, editRkey, draftKey }: { uri?: string; edit
   const [draftDismissed, setDraftDismissed] = useState(false);
   const [resuming, setResuming] = useState(false);
 
-  // Determine which previewBase ref to load (from draft or record)
-  const draftBaseRef = draftData?.state.previewBaseRef as { uri: string; cid: string } | null | undefined;
-  const recordBaseRef = recordData?.record.value.previewBase as { uri: string; cid: string } | undefined;
-  const previewBaseRef = draftData ? draftBaseRef : recordBaseRef;
+  // Determine which base avatar ref to load (from draft or record)
+  const draftBaseRef = draftData?.state.baseAvatarRef as { uri: string; cid: string } | null | undefined;
+  const recordBaseRef = recordData?.record.value.baseAvatar as { uri: string; cid: string } | undefined;
+  const baseAvatarRef = draftData ? draftBaseRef : recordBaseRef;
 
   const { data: baseAvatarData, isLoading: baseLoading } = useQuery({
-    queryKey: ["wearable-preview-base", previewBaseRef?.uri],
+    queryKey: ["wearable-base-avatar", baseAvatarRef?.uri],
     queryFn: async () => {
       const session = getSession();
-      const parsed = parseAtUri(previewBaseRef!.uri);
+      const parsed = parseAtUri(baseAvatarRef!.uri);
       const baseRec = await fetchRecord(session.pds, parsed.did, parsed.collection, parsed.rkey);
       if (!baseRec?.value?.spriteSheet) return null;
       const baseBlobCid = extractBlobCid(baseRec.value.spriteSheet);
       if (!baseBlobCid) return null;
       const baseImg = await loadImage(blobUrl(session.pds, parsed.did, baseBlobCid));
       return {
-        uri: previewBaseRef!.uri,
-        cid: previewBaseRef!.cid,
+        uri: baseAvatarRef!.uri,
+        cid: baseAvatarRef!.cid,
         name: (baseRec.value.name as string) || "Base Avatar",
         layers: (baseRec.value.layers ?? []) as AnimationLayer[],
         image: baseImg,
       };
     },
-    enabled: !!previewBaseRef?.uri,
+    enabled: !!baseAvatarRef?.uri,
   });
 
   const isLoading = recordLoading || draft.isLoading;
@@ -147,7 +147,7 @@ export function WearableEditor({ uri, editRkey, draftKey }: { uri?: string; edit
   }
 
   // Wait for base avatar if referenced
-  if (!!previewBaseRef && baseLoading) {
+  if (!!baseAvatarRef && baseLoading) {
     return <div className="text-text-muted text-xs py-8 text-center">Loading...</div>;
   }
 
@@ -391,7 +391,7 @@ function WearableEditorInner({ recordData, draftData, initialBaseAvatar, editRke
 
   useEffect(() => {
     const { editor } = store.getState();
-    const previewBaseRef = baseAvatar ? { uri: baseAvatar.uri, cid: baseAvatar.cid } : null;
+    const baseAvatarRef = baseAvatar ? { uri: baseAvatar.uri, cid: baseAvatar.cid } : null;
     draft?.saveDraft(
       {
         name: editor.name,
@@ -400,7 +400,7 @@ function WearableEditorInner({ recordData, draftData, initialBaseAvatar, editRke
         targets: editor.targets,
         stateProperties: editor.stateProperties,
         behaviors: editor.behaviors,
-        previewBaseRef,
+        baseAvatarRef,
       },
       targetSprites,
       editor.name || "Untitled Wearable",
@@ -450,7 +450,7 @@ function WearableEditorInner({ recordData, draftData, initialBaseAvatar, editRke
         layers,
         ...(editor.behaviors.length > 0 ? { behaviors: editor.behaviors } : {}),
         ...(statePropertyRecords.length > 0 ? { stateProperties: statePropertyRecords } : {}),
-        ...(baseAvatar ? { previewBase: { uri: baseAvatar.uri, cid: baseAvatar.cid } } : {}),
+        ...(baseAvatar ? { baseAvatar: { uri: baseAvatar.uri, cid: baseAvatar.cid } } : {}),
         createdAt: new Date().toISOString(),
       };
 

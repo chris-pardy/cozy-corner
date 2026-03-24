@@ -74,6 +74,7 @@ export async function buildSpriteSheet(
       height: sprite.frameHeight,
     })),
     frameRate: Math.round(1000 / sprite.fps),
+    zIndex: 0,
   }));
 
   // Prefer WebP, fall back to PNG

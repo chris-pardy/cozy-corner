@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { PDSBrowser, type BrowsableType } from "~/atproto/PDSBrowser";
 import type {
   AnimationLayer,
-  LayerTint,
+  ChannelTint,
   Transform,
   StateProperty,
   StateValue,
@@ -54,13 +54,13 @@ import {
 interface LoadedLayer {
   image: HTMLImageElement;
   layers: AnimationLayer[];
-  tints: LayerTint[];
+  tints: ChannelTint[];
 }
 
 interface EquippedEntry {
   ref: { uri: string; cid: string };
   name: string;
-  tints: LayerTint[];
+  tints: ChannelTint[];
   transform?: Transform;
   state: StateValueData[];
   loaded: LoadedLayer | null;
@@ -89,7 +89,7 @@ async function fetchRecord(
 async function loadWearableLayer(
   pds: string,
   ref: { uri: string; cid: string },
-  tints: LayerTint[],
+  tints: ChannelTint[],
 ): Promise<{ name: string; loaded: LoadedLayer | null; overridableProps: StatePropertyData[] }> {
   const parsed = parseAtUri(ref.uri);
   const rec = await fetchRecord(
@@ -143,67 +143,37 @@ function TintControls({
   onChange,
 }: {
   layers: AnimationLayer[];
-  tints: LayerTint[];
-  onChange: (tints: LayerTint[]) => void;
+  tints: ChannelTint[];
+  onChange: (tints: ChannelTint[]) => void;
 }) {
-  // Group layer indexes by layerName
-  const groups = useMemo(() => {
-    const map = new Map<string, number[]>();
-    layers.forEach((layer, index) => {
-      const name = layer.layerName;
-      if (!name) return;
-      const existing = map.get(name);
-      if (existing) {
-        existing.push(index);
-      } else {
-        map.set(name, [index]);
-      }
-    });
-    // If no named layers but layers exist, create a single "All" group
-    if (map.size === 0 && layers.length > 0) {
-      map.set("All", layers.map((_, i) => i));
+  // Collect unique colorChannel values from the animation layers
+  const channels = useMemo(() => {
+    const seen = new Set<string>();
+    for (const layer of layers) {
+      if (layer.colorChannel) seen.add(layer.colorChannel);
     }
-    return map;
+    return Array.from(seen);
   }, [layers]);
 
-  // Build lookup: layerName → current tint color
-  const tintByName = useMemo(() => {
-    const indexToGroup = new Map<number, string>();
-    for (const [name, indexes] of groups) {
-      for (const i of indexes) {
-        indexToGroup.set(i, name);
-      }
-    }
-
+  // Build lookup: channel name → current tint color
+  const tintByChannel = useMemo(() => {
     const result = new Map<string, string>();
-    for (const { layerIndexes, tint } of tints) {
-      for (const i of layerIndexes) {
-        const name = indexToGroup.get(i);
-        if (name) result.set(name, tint);
-      }
+    for (const { channel, tint } of tints) {
+      result.set(channel, tint);
     }
     return result;
-  }, [groups, tints]);
+  }, [tints]);
 
-  if (groups.size === 0) return null;
+  if (channels.length === 0) return null;
 
-  const setTint = (name: string, color: string | null) => {
-    const indexes = groups.get(name);
-    if (!indexes) return;
-
-    // Remove tint entries that reference any of these indexes
-    const indexSet = new Set(indexes);
-    const newTints = tints
-      .map((t) => ({
-        ...t,
-        layerIndexes: t.layerIndexes.filter((i) => !indexSet.has(i)),
-      }))
-      .filter((t) => t.layerIndexes.length > 0);
+  const setTint = (channel: string, color: string | null) => {
+    // Remove existing entry for this channel
+    const newTints = tints.filter((t) => t.channel !== channel);
 
     if (color) {
       newTints.push({
-        $type: "at.cozy-corner.defs#layerTint" as const,
-        layerIndexes: indexes,
+        $type: "at.cozy-corner.defs#channelTint" as const,
+        channel,
         tint: color,
       });
     }
@@ -216,27 +186,27 @@ function TintControls({
       <span className="font-heading text-[9px] uppercase tracking-wide text-text-muted w-full">
         Color
       </span>
-      {Array.from(groups.keys()).map((name) => (
-        <div key={name} className="flex items-center gap-2">
+      {channels.map((channel) => (
+        <div key={channel} className="flex items-center gap-2">
           <span className="font-heading text-[9px] uppercase tracking-wide text-text-muted">
-            {name}
+            {channel}
           </span>
           <div className="relative">
             <input
               type="color"
-              value={tintByName.get(name) ?? "#ffffff"}
-              onChange={(e) => setTint(name, e.target.value)}
+              value={tintByChannel.get(channel) ?? "#ffffff"}
+              onChange={(e) => setTint(channel, e.target.value)}
               className="w-6 h-6 border-2 border-border rounded-sm cursor-pointer bg-transparent p-0"
             />
-            {!tintByName.has(name) && (
+            {!tintByChannel.has(channel) && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-[8px] text-text-muted">
                 --
               </div>
             )}
           </div>
-          {tintByName.has(name) && (
+          {tintByChannel.has(channel) && (
             <button
-              onClick={() => setTint(name, null)}
+              onClick={() => setTint(channel, null)}
               className="text-[8px] text-text-muted hover:text-error cursor-pointer bg-transparent border-0"
             >
               &times;
@@ -412,7 +382,7 @@ export function AvatarEditor({
       let baseEntry: EquippedEntry | null = null;
       if (avatarValue?.baseAvatar) {
         const ref = avatarValue.baseAvatar as { uri: string; cid: string };
-        const tints = (avatarValue.baseAvatarTints ?? []) as LayerTint[];
+        const tints = (avatarValue.baseAvatarTints ?? []) as ChannelTint[];
         const transform = avatarValue.baseAvatarTransform as
           | Transform
           | undefined;
@@ -420,7 +390,7 @@ export function AvatarEditor({
         baseEntry = { ref, name, tints, transform, state: [], loaded, _overridableProps: overridableProps };
       } else {
         const img = await loadImage(defaultAvatarUrl);
-        const tints = (avatarValue?.baseAvatarTints ?? []) as LayerTint[];
+        const tints = (avatarValue?.baseAvatarTints ?? []) as ChannelTint[];
         const transform = avatarValue?.baseAvatarTransform as
           | Transform
           | undefined;
@@ -445,7 +415,7 @@ export function AvatarEditor({
 
       for (const equipped of rawWearables) {
         const ref = equipped.wearable as { uri: string; cid: string };
-        const tints = (equipped.tints ?? []) as LayerTint[];
+        const tints = (equipped.tints ?? []) as ChannelTint[];
         const transform = equipped.transform as Transform | undefined;
         const state = ((equipped.state ?? []) as StateValue[]).map((sv) => ({ name: sv.name, value: sv.value ?? "" }));
         const { name, loaded, overridableProps } = await loadWearableLayer(pds, ref, tints);
@@ -711,7 +681,7 @@ function AvatarEditorInner({
 
   // Handle tint changes for the selected layer
   const handleTintsChange = useCallback(
-    (newTints: LayerTint[]) => {
+    (newTints: ChannelTint[]) => {
       const baseLoaded = baseAvatar ? loadedLayers.has(loadedLayerKey(baseAvatar.ref)) : false;
       if (baseLoaded && selectedIndex === 0) {
         // Update Redux
@@ -815,7 +785,7 @@ function AvatarEditorInner({
       }
 
       const ref = { uri: selectedUri, cid: recordCid };
-      const tints: LayerTint[] = [];
+      const tints: ChannelTint[] = [];
       const name = (value.name as string) ?? parsed.rkey;
 
       let loaded: LoadedLayer | null = null;

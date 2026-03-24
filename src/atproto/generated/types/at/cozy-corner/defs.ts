@@ -22,7 +22,6 @@ export interface AnimationFrame {
   width: number
   /** Source height in sprite sheet */
   height: number
-  transform?: Transform
 }
 
 const hashAnimationFrame = 'animationFrame'
@@ -38,14 +37,40 @@ export function validateAnimationFrame<V>(v: V) {
 /** A layer of sprite animations */
 export interface AnimationLayer {
   $type?: 'at.cozy-corner.defs#animationLayer'
-  /** The state of the avatar or wearable, or the variant of the item. Values like 'idle', 'walk', 'sit'. */
-  target: 'idle-north' | 'walk-south' | 'sit' | (string & {})
+  /** Animation state identifier. For base avatars and wearables, use the well-known directional targets: walk-south, walk-north, walk-east, walk-west, sit-south, sit-north, sit-east, sit-west, hold-south, hold-north, hold-east, hold-west, push-south, push-north, push-east, push-west, pickup-south, pickup-north, pickup-east, pickup-west, and dance. Frame count and frame rate are defined per layer — authors choose their own animation detail level. For items, this is the variant name. */
+  target:
+    | 'walk-south'
+    | 'walk-north'
+    | 'walk-east'
+    | 'walk-west'
+    | 'sit-south'
+    | 'sit-north'
+    | 'sit-east'
+    | 'sit-west'
+    | 'hold-south'
+    | 'hold-north'
+    | 'hold-east'
+    | 'hold-west'
+    | 'push-south'
+    | 'push-north'
+    | 'push-east'
+    | 'push-west'
+    | 'pickup-south'
+    | 'pickup-north'
+    | 'pickup-east'
+    | 'pickup-west'
+    | 'dance'
+    | (string & {})
   /** The display name of the layer */
   layerName?: string
   /** The frames of the animation */
   frames: AnimationFrame[]
   /** The frame rate in milliseconds per frame */
   frameRate: number
+  /** Draw order relative to the entity. 0 = behind (default), 1 = in front. For furniture this allows parts like armrests to draw over the avatar. */
+  zIndex: number
+  /** Optional color channel name for tint customization. Layers sharing the same channel name are tinted together. When present, the user can customize the tint color for this channel. When omitted, the layer is not user-customizable. */
+  colorChannel?: string
 }
 
 const hashAnimationLayer = 'animationLayer'
@@ -58,23 +83,23 @@ export function validateAnimationLayer<V>(v: V) {
   return validate<AnimationLayer & V>(v, id, hashAnimationLayer)
 }
 
-/** A tint for a layer */
-export interface LayerTint {
-  $type?: 'at.cozy-corner.defs#layerTint'
-  /** The indexes of the layers to tint */
-  layerIndexes: number[]
-  /** Hex color to tint the layer (e.g. '#cc4444'). Must be a '#' followed by 3 or 6 hex digits. If omitted, layer renders as-is. */
+/** A tint for a color channel. All animation layers sharing the same colorChannel name are tinted together. */
+export interface ChannelTint {
+  $type?: 'at.cozy-corner.defs#channelTint'
+  /** The color channel name. Must match a colorChannel value on one or more animation layers. */
+  channel: string
+  /** Hex color to tint the channel (e.g. '#cc4444'). Must be a '#' followed by 3 or 6 hex digits. */
   tint: string
 }
 
-const hashLayerTint = 'layerTint'
+const hashChannelTint = 'channelTint'
 
-export function isLayerTint<V>(v: V) {
-  return is$typed(v, id, hashLayerTint)
+export function isChannelTint<V>(v: V) {
+  return is$typed(v, id, hashChannelTint)
 }
 
-export function validateLayerTint<V>(v: V) {
-  return validate<LayerTint & V>(v, id, hashLayerTint)
+export function validateChannelTint<V>(v: V) {
+  return validate<ChannelTint & V>(v, id, hashChannelTint)
 }
 
 /** 2D affine transform for wearables and other sprite-like entities. Components map directly to a CanvasRenderingContext2D-style transform(a, b, c, d, e, f). Values are stored as fixed-point integers where 1000 = 1.0 (e.g. 1500 = 1.5, -500 = -0.5). If omitted, the identity transform is used. */

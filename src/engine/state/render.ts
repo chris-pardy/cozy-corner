@@ -1,5 +1,5 @@
 import type { AnimationLayer } from "~/atproto/generated/types/at/cozy-corner/defs";
-import type { LayerTint, Transform } from "~/atproto/generated/types/at/cozy-corner/defs";
+import type { ChannelTint, Transform } from "~/atproto/generated/types/at/cozy-corner/defs";
 
 /** Animation layers for this entity's sprite sheet. */
 export const LAYERS = "engine:layers";
@@ -14,7 +14,7 @@ export const TARGET = "engine:target";
 export const TARGET_START_TIME = "engine:targetStartTime";
 
 export interface ChildRenderConfig {
-  tints: LayerTint[];
+  tints: ChannelTint[];
   transform?: Transform;
 }
 

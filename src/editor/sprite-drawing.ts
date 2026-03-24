@@ -307,6 +307,40 @@ export function scale2x(src: ImageData): ImageData {
 }
 
 /**
+ * RotSprite rotation on raw ImageData: upscale 8x via Scale2x, rotate, downscale.
+ * Returns a new OffscreenCanvas with the rotated result.
+ */
+export function rotspriteRotateImageData(
+  source: ImageData,
+  w: number,
+  h: number,
+  angleDeg: number,
+): OffscreenCanvas {
+  let imgData = source;
+  for (let i = 0; i < 3; i++) imgData = scale2x(imgData);
+
+  const uw = w * 8;
+  const uh = h * 8;
+
+  const upCanvas = new OffscreenCanvas(uw, uh);
+  upCanvas.getContext("2d")!.putImageData(imgData, 0, 0);
+
+  const rotCanvas = new OffscreenCanvas(uw, uh);
+  const rotCtx = rotCanvas.getContext("2d")!;
+  rotCtx.translate(uw / 2, uh / 2);
+  rotCtx.rotate((angleDeg * Math.PI) / 180);
+  rotCtx.imageSmoothingEnabled = false;
+  rotCtx.drawImage(upCanvas, -uw / 2, -uh / 2);
+
+  const downCanvas = new OffscreenCanvas(w, h);
+  const downCtx = downCanvas.getContext("2d")!;
+  downCtx.imageSmoothingEnabled = false;
+  downCtx.drawImage(rotCanvas, 0, 0, w, h);
+
+  return downCanvas;
+}
+
+/**
  * RotSprite rotation: upscale 8x via Scale2x, rotate, then downscale back.
  * Produces pixel-art-friendly rotations at arbitrary angles.
  */
@@ -322,36 +356,11 @@ export function rotspriteRotate(
   const x = frame * w;
   const y = layerId * h;
 
-  // 1. Extract cell ImageData
-  let imgData = ctx.getImageData(x, y, w, h);
+  const imgData = ctx.getImageData(x, y, w, h);
+  const result = rotspriteRotateImageData(imgData, w, h, angleDeg);
 
-  // 2. Apply scale2x 3x (8x upscale)
-  for (let i = 0; i < 3; i++) imgData = scale2x(imgData);
-
-  const uw = w * 8;
-  const uh = h * 8;
-
-  // 3. Put upscaled data on temp canvas
-  const upCanvas = new OffscreenCanvas(uw, uh);
-  upCanvas.getContext("2d")!.putImageData(imgData, 0, 0);
-
-  // 4. Rotate on second temp canvas
-  const rotCanvas = new OffscreenCanvas(uw, uh);
-  const rotCtx = rotCanvas.getContext("2d")!;
-  rotCtx.translate(uw / 2, uh / 2);
-  rotCtx.rotate((angleDeg * Math.PI) / 180);
-  rotCtx.imageSmoothingEnabled = false;
-  rotCtx.drawImage(upCanvas, -uw / 2, -uh / 2);
-
-  // 5. Downscale back to w x h with nearest-neighbor
-  const downCanvas = new OffscreenCanvas(w, h);
-  const downCtx = downCanvas.getContext("2d")!;
-  downCtx.imageSmoothingEnabled = false;
-  downCtx.drawImage(rotCanvas, 0, 0, w, h);
-
-  // 6. Clear original cell, draw result back
   ctx.clearRect(x, y, w, h);
-  ctx.drawImage(downCanvas, x, y);
+  ctx.drawImage(result, x, y);
 }
 
 /** Apply a translate + scale transform to a cell in the backing canvas. */

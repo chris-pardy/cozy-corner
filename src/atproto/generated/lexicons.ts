@@ -33,7 +33,7 @@ export const schemaDict = {
               description: 'Tints for the base avatar layers',
               items: {
                 type: 'ref',
-                ref: 'lex:at.cozy-corner.defs#layerTint',
+                ref: 'lex:at.cozy-corner.defs#channelTint',
               },
             },
             baseAvatarTransform: {
@@ -75,7 +75,7 @@ export const schemaDict = {
             description: 'Tints for the wearable layers',
             items: {
               type: 'ref',
-              ref: 'lex:at.cozy-corner.defs#layerTint',
+              ref: 'lex:at.cozy-corner.defs#channelTint',
             },
           },
           transform: {
@@ -140,7 +140,8 @@ export const schemaDict = {
             },
             layers: {
               type: 'array',
-              description: 'layers of the base avatar',
+              description:
+                'Animation layers for the base avatar. A complete base avatar should provide layers for the well-known targets: walk (south/north/east/west), sit (south/north/east/west), hold (south/north/east/west), push (south/north/east/west), pickup (south/north/east/west), and dance. Stand pose reuses walk frame 1. Frame count and frame rate are per-layer. Authoring tools may generate east/west by mirroring.',
               items: {
                 type: 'ref',
                 ref: 'lex:at.cozy-corner.defs#animationLayer',
@@ -182,11 +183,17 @@ export const schemaDict = {
       main: {
         type: 'record',
         description:
-          "A wearable overlay for avatars. Provides directional sprite sheets with walk animation frames. Can be created by any user and equipped by others. Compositing z-order is determined by position in the avatar's wearable list, not by the wearable itself.",
+          "A wearable overlay for avatars. Authored against a specific base avatar whose animation targets it must match. Can be created by any user and equipped by others. Compositing z-order is determined by position in the avatar's wearable list, not by the wearable itself.",
         key: 'tid',
         record: {
           type: 'object',
-          required: ['name', 'spriteSheet', 'layers', 'createdAt'],
+          required: [
+            'name',
+            'spriteSheet',
+            'layers',
+            'baseAvatar',
+            'createdAt',
+          ],
           properties: {
             name: {
               type: 'string',
@@ -242,11 +249,11 @@ export const schemaDict = {
               },
               maxLength: 32,
             },
-            previewBase: {
+            baseAvatar: {
               type: 'ref',
               ref: 'lex:com.atproto.repo.strongRef',
               description:
-                'Optional strong reference to a base avatar record used for previewing this wearable.',
+                "Strong reference to the base avatar record this wearable is authored against. The wearable's animation layers must match the base avatar's well-known targets.",
             },
             createdAt: {
               type: 'string',
@@ -1084,10 +1091,6 @@ export const schemaDict = {
             type: 'integer',
             description: 'Source height in sprite sheet',
           },
-          transform: {
-            type: 'ref',
-            ref: 'lex:at.cozy-corner.defs#transform',
-          },
         },
       },
       animationLayer: {
@@ -1098,8 +1101,30 @@ export const schemaDict = {
           target: {
             type: 'string',
             description:
-              "The state of the avatar or wearable, or the variant of the item. Values like 'idle', 'walk', 'sit'.",
-            knownValues: ['idle-north', 'walk-south', 'sit'],
+              'Animation state identifier. For base avatars and wearables, use the well-known directional targets: walk-south, walk-north, walk-east, walk-west, sit-south, sit-north, sit-east, sit-west, hold-south, hold-north, hold-east, hold-west, push-south, push-north, push-east, push-west, pickup-south, pickup-north, pickup-east, pickup-west, and dance. Frame count and frame rate are defined per layer — authors choose their own animation detail level. For items, this is the variant name.',
+            knownValues: [
+              'walk-south',
+              'walk-north',
+              'walk-east',
+              'walk-west',
+              'sit-south',
+              'sit-north',
+              'sit-east',
+              'sit-west',
+              'hold-south',
+              'hold-north',
+              'hold-east',
+              'hold-west',
+              'push-south',
+              'push-north',
+              'push-east',
+              'push-west',
+              'pickup-south',
+              'pickup-north',
+              'pickup-east',
+              'pickup-west',
+              'dance',
+            ],
           },
           layerName: {
             type: 'string',
@@ -1118,25 +1143,40 @@ export const schemaDict = {
             description: 'The frame rate in milliseconds per frame',
             default: 24,
           },
+          zIndex: {
+            type: 'integer',
+            description:
+              'Draw order relative to the entity. 0 = behind (default), 1 = in front. For furniture this allows parts like armrests to draw over the avatar.',
+            default: 0,
+            minimum: 0,
+            maximum: 1,
+          },
+          colorChannel: {
+            type: 'string',
+            description:
+              'Optional color channel name for tint customization. Layers sharing the same channel name are tinted together. When present, the user can customize the tint color for this channel. When omitted, the layer is not user-customizable.',
+            maxLength: 640,
+            maxGraphemes: 64,
+          },
         },
       },
-      layerTint: {
+      channelTint: {
         type: 'object',
-        description: 'A tint for a layer',
-        required: ['layerIndexes', 'tint'],
+        description:
+          'A tint for a color channel. All animation layers sharing the same colorChannel name are tinted together.',
+        required: ['channel', 'tint'],
         properties: {
-          layerIndexes: {
-            type: 'array',
-            description: 'The indexes of the layers to tint',
-            items: {
-              type: 'integer',
-              description: 'The index of the layer to tint',
-            },
+          channel: {
+            type: 'string',
+            description:
+              'The color channel name. Must match a colorChannel value on one or more animation layers.',
+            maxLength: 640,
+            maxGraphemes: 64,
           },
           tint: {
             type: 'string',
             description:
-              "Hex color to tint the layer (e.g. '#cc4444'). Must be a '#' followed by 3 or 6 hex digits. If omitted, layer renders as-is.",
+              "Hex color to tint the channel (e.g. '#cc4444'). Must be a '#' followed by 3 or 6 hex digits.",
             maxLength: 7,
           },
         },
@@ -1728,7 +1768,7 @@ export const schemaDict = {
             description: 'Tints for the tile',
             items: {
               type: 'ref',
-              ref: 'lex:at.cozy-corner.defs#layerTint',
+              ref: 'lex:at.cozy-corner.defs#channelTint',
             },
           },
           transform: {
@@ -1780,7 +1820,7 @@ export const schemaDict = {
             description: 'Tints for the item layers',
             items: {
               type: 'ref',
-              ref: 'lex:at.cozy-corner.defs#layerTint',
+              ref: 'lex:at.cozy-corner.defs#channelTint',
             },
           },
           transform: {
@@ -1973,7 +2013,7 @@ export const schemaDict = {
             description: 'Tints for the critter layers',
             items: {
               type: 'ref',
-              ref: 'lex:at.cozy-corner.defs#layerTint',
+              ref: 'lex:at.cozy-corner.defs#channelTint',
             },
           },
           state: {

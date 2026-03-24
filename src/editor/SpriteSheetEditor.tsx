@@ -20,6 +20,7 @@ function defaultLayer(
       height: image.naturalHeight,
     }],
     frameRate: 100,
+    zIndex: 0,
   };
 }
 

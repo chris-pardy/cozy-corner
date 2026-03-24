@@ -13,6 +13,7 @@ import {
   transformLayer,
 } from "../sprite-drawing";
 
+
 /**
  * Canvas operations that pair backing-canvas mutations with Redux dispatches.
  * Created once per editor instance; holds a ref to the backing OffscreenCanvas.

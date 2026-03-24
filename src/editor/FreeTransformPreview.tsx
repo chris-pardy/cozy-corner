@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import type {
   AnimationLayer,
-  LayerTint,
+  ChannelTint,
   Transform,
 } from "~/atproto/generated/types/at/cozy-corner/defs";
 import { Entity } from "~/engine/entity";
@@ -24,7 +24,7 @@ import {
 export interface PreviewLayer {
   image: HTMLImageElement;
   layers: AnimationLayer[];
-  tints: LayerTint[];
+  tints: ChannelTint[];
 }
 
 // eslint-disable-next-line react-refresh/only-export-components

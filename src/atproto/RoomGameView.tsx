@@ -10,10 +10,6 @@ import { Entity, resetEventBudget } from "~/engine/entity";
 import { dataEvent } from "~/engine/store/actions";
 import { AttributeMap, ATTRIBUTE_MAP } from "~/engine/state/attributes";
 import { TILE_SHEET, TILE_ATLAS, TILE_POSITIONS, TILE_SIZE, type TileFrame, type PlacedTile } from "~/engine/state/tiles";
-import { BLOCKING_GRID, type BlockingGrid } from "~/engine/state/blocking";
-import { TileLayerCache } from "~/engine/render/cachedTileLayer";
-import { LightOverlayCache } from "~/engine/render/lightOverlay";
-import { renderEntity, TintCanvasPool } from "~/engine/render/composite";
 import { selectEntityById } from "~/engine/store/selectors";
 import type { RootState } from "~/engine/store/store";
 import {
@@ -54,8 +50,7 @@ export function RoomGameView({
   const { phase, error, builtRoom } = useRoomLoader(handle, tid);
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rafRef = useRef<number>(0);
+  const pixiContainerRef = useRef<HTMLDivElement>(null);
   const enteredRef = useRef(false);
   const wasMovingRef = useRef(false);
   const sizeRef = useRef({ w: 0, h: 0 });
@@ -81,142 +76,175 @@ export function RoomGameView({
 
   const MAX_TILE_PX = 48;
 
-  // Game loop
+  // Pixi game loop
   useEffect(() => {
     if (!builtRoom) return;
     enteredRef.current = false;
 
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    const pixiContainer = pixiContainerRef.current;
+    if (!pixiContainer) return;
 
     const { roomEntity, playerEntity, store, exits } = builtRoom;
 
-    // Create render caches (persist across frames, destroyed on cleanup)
-    const bgTileCache = new TileLayerCache();
-    const overheadTileCache = new TileLayerCache();
-    const lightCache = new LightOverlayCache();
-    const tintPool = new TintCanvasPool();
+    let destroyed = false;
+    const cleanupRef = { current: () => {} };
 
-    function tick(time: number) {
-      if (!ctx || !canvas) return;
+    // Async setup
+    (async () => {
+      const { createPixiApp } = await import("~/engine/pixi/createPixiApp");
+      const { PixiSceneSync } = await import("~/engine/pixi/sceneSync");
+      const { buildTileLayerContainer, updateAnimatedTiles } = await import("~/engine/pixi/tileLayer");
+      const { PixiLightOverlay } = await import("~/engine/pixi/lightOverlay");
+      const { Container } = await import("pixi.js");
 
-      const vw = sizeRef.current.w;
-      const vh = sizeRef.current.h;
+      if (destroyed) return;
 
-      // Reset per-frame event budget before processing any events
-      resetEventBudget();
+      const app = await createPixiApp(pixiContainer);
+      if (destroyed) { app.destroy(true); return; }
 
-      // 0. Enter — fire once on first tick
-      if (!enteredRef.current) {
-        enteredRef.current = true;
-        store.dispatch(dataEvent({ entityId: "room", type: "enter", data: {}, time }));
-      }
+      // Scene structure
+      const worldContainer = new Container();
+      worldContainer.sortableChildren = true;
+      app.stage.addChild(worldContainer);
 
-      // 1. Tick — propagates to children via behavior middleware
-      store.dispatch(dataEvent({ entityId: "room", type: "tick", data: {}, time }));
-
-      // 2. Attributes — reset and emit (propagates to children)
-      const attrMap = roomEntity.get<AttributeMap>(ATTRIBUTE_MAP);
-      if (attrMap) {
-        attrMap.reset();
-        store.dispatch(dataEvent({ entityId: "room", type: "emit-attributes", data: {}, time }));
-        lightCache.dirty = true;
-      }
-
-      // 3. Exit check
-      const currentPos = playerEntity.get<Position>(POSITION);
-      const moveTarget = playerEntity.get<Position>(MOVE_TARGET);
-
-      if (!moveTarget && wasMovingRef.current && currentPos) {
-        wasMovingRef.current = false;
-        const direction = playerEntity.get<number>(DIRECTION) ?? 0;
-        const exitMask = DIR_INDEX_TO_EXIT_MASK[direction];
-
-        for (const exit of exits) {
-          if (!exit.targetUri) continue;
-          if (!(exit.direction & exitMask)) continue;
-          if (
-            currentPos.x >= exit.x &&
-            currentPos.x < exit.x + exit.width &&
-            currentPos.y >= exit.y &&
-            currentPos.y < exit.y + exit.height
-          ) {
-            // Navigate to target room
-            const parsed = parseAtUri(exit.targetUri);
-            if (parsed) {
-              navigate({
-                to: "/$handle/$nsid/$tid",
-                params: {
-                  handle: parsed.did,
-                  nsid: parsed.collection,
-                  tid: parsed.rkey,
-                },
-              });
-              return;
-            }
-          }
-        }
-      }
-
-      if (moveTarget) {
-        wasMovingRef.current = true;
-      }
-
-      // 4. Camera is updated by CameraBehavior during tick (above).
-      //    Read camera state from the room entity.
-      const cam = roomEntity.get<CameraPosition>(CAMERA_TARGET);
-      const vd = roomEntity.get<number>(VIEW_DISTANCE) ?? DEFAULT_VIEW_DISTANCE;
-
-      // 5. Render — direct draw calls instead of RenderEvent
-      const viewportTiles = vd * 2 + 1;
-      const scale = sizeRef.current.w / (viewportTiles * TILE_PX);
-
-      ctx.clearRect(0, 0, vw, vh);
-      ctx.save();
-      ctx.imageSmoothingEnabled = false;
-
-      // Translate so camera center = canvas center, then scale
-      ctx.translate(vw / 2, vh / 2);
-      ctx.scale(scale, scale);
-      if (cam) {
-        ctx.translate(-Math.round(cam.x), -Math.round(cam.y));
-      }
-
-      // Read tile data from room entity
-      const sheet = roomEntity.get<CanvasImageSource>(TILE_SHEET);
+      // Build tile layers
+      const sheet = roomEntity.get<CanvasImageSource>(TILE_SHEET) as HTMLImageElement;
       const atlas = roomEntity.get<TileFrame[]>(TILE_ATLAS);
       const tiles = roomEntity.get<PlacedTile[]>(TILE_POSITIONS);
-      const tileSize = roomEntity.get<number>(TILE_SIZE);
-      const grid = roomEntity.get<BlockingGrid>(BLOCKING_GRID);
+      const tileSize = roomEntity.get<number>(TILE_SIZE) ?? TILE_PX;
 
-      // Background tiles (cached, layer 0)
-      if (sheet && atlas && tiles && tileSize && grid) {
-        bgTileCache.draw(ctx, 0, sheet, atlas, tiles, tileSize, grid, time);
-      }
+      let bgAnimated: import("~/engine/pixi/tileLayer").AnimatedTileEntry[] = [];
+      let overheadAnimated: import("~/engine/pixi/tileLayer").AnimatedTileEntry[] = [];
 
-      // Y-sorted entities (children of room)
-      renderEntity(ctx, roomEntity, time, new Map(), tintPool);
+      if (sheet && atlas && tiles) {
+        // Background (layer 0)
+        const bg = await buildTileLayerContainer(sheet, atlas, tiles, tileSize, 0);
+        bg.container.zIndex = -100000;
+        worldContainer.addChild(bg.container);
+        bgAnimated = bg.animated;
 
-      // Overhead tiles (cached, layer 2)
-      if (sheet && atlas && tiles && tileSize && grid) {
-        overheadTileCache.draw(ctx, 2, sheet, atlas, tiles, tileSize, grid, time);
+        // Overhead (layer 2)
+        const overhead = await buildTileLayerContainer(sheet, atlas, tiles, tileSize, 2);
+        overhead.container.zIndex = 100000;
+        worldContainer.addChild(overhead.container);
+        overheadAnimated = overhead.animated;
       }
 
       // Light overlay
-      if (attrMap && tileSize) {
-        lightCache.draw(ctx, attrMap, tileSize);
-      }
+      const lightOverlay = new PixiLightOverlay();
+      const lightSprite = await lightOverlay.getSprite();
+      lightSprite.zIndex = 200000;
+      worldContainer.addChild(lightSprite);
 
-      ctx.restore();
+      // Scene sync for entities
+      const sceneSync = new PixiSceneSync(worldContainer);
 
-      rafRef.current = requestAnimationFrame(tick);
-    }
+      // Ticker callback — replaces the old rAF loop
+      app.ticker.add(async () => {
+        const time = performance.now();
+        const vw = sizeRef.current.w;
+        const vh = sizeRef.current.h;
 
-    rafRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(rafRef.current);
+        // Reset per-frame event budget
+        resetEventBudget();
+
+        // 0. Enter — fire once on first tick
+        if (!enteredRef.current) {
+          enteredRef.current = true;
+          store.dispatch(dataEvent({ entityId: "room", type: "enter", data: {}, time }));
+        }
+
+        // 1. Tick — propagates to children via behavior middleware
+        store.dispatch(dataEvent({ entityId: "room", type: "tick", data: {}, time }));
+
+        // 2. Attributes — reset and emit
+        const attrMap = roomEntity.get<AttributeMap>(ATTRIBUTE_MAP);
+        if (attrMap) {
+          attrMap.reset();
+          store.dispatch(dataEvent({ entityId: "room", type: "emit-attributes", data: {}, time }));
+          lightOverlay.dirty = true;
+        }
+
+        // 3. Exit check
+        const currentPos = playerEntity.get<Position>(POSITION);
+        const moveTarget = playerEntity.get<Position>(MOVE_TARGET);
+
+        if (!moveTarget && wasMovingRef.current && currentPos) {
+          wasMovingRef.current = false;
+          const direction = playerEntity.get<number>(DIRECTION) ?? 0;
+          const exitMask = DIR_INDEX_TO_EXIT_MASK[direction];
+
+          for (const exit of exits) {
+            if (!exit.targetUri) continue;
+            if (!(exit.direction & exitMask)) continue;
+            if (
+              currentPos.x >= exit.x &&
+              currentPos.x < exit.x + exit.width &&
+              currentPos.y >= exit.y &&
+              currentPos.y < exit.y + exit.height
+            ) {
+              const parsed = parseAtUri(exit.targetUri);
+              if (parsed) {
+                navigate({
+                  to: "/$handle/$nsid/$tid",
+                  params: {
+                    handle: parsed.did,
+                    nsid: parsed.collection,
+                    tid: parsed.rkey,
+                  },
+                });
+                return;
+              }
+            }
+          }
+        }
+
+        if (moveTarget) {
+          wasMovingRef.current = true;
+        }
+
+        // 4. Camera
+        const cam = roomEntity.get<CameraPosition>(CAMERA_TARGET);
+        const vd = roomEntity.get<number>(VIEW_DISTANCE) ?? DEFAULT_VIEW_DISTANCE;
+        const viewportTiles = vd * 2 + 1;
+        const scale = vw / (viewportTiles * TILE_PX);
+
+        // Update camera: translate world container so camera center = canvas center
+        if (cam) {
+          worldContainer.x = vw / 2 - Math.round(cam.x) * scale;
+          worldContainer.y = vh / 2 - Math.round(cam.y) * scale;
+        }
+        worldContainer.scale.set(scale);
+
+        // 5. Update animated tiles
+        if (bgAnimated.length > 0) updateAnimatedTiles(bgAnimated, time);
+        if (overheadAnimated.length > 0) updateAnimatedTiles(overheadAnimated, time);
+
+        // 6. Sync entity tree to pixi
+        await sceneSync.sync(roomEntity, time);
+
+        // 7. Light overlay
+        if (attrMap) {
+          await lightOverlay.update(attrMap, tileSize);
+        }
+      });
+
+      // Cleanup on unmount
+      const cleanup = () => {
+        destroyed = true;
+        sceneSync.destroy();
+        lightOverlay.destroy();
+        app.destroy(true);
+      };
+
+      // Store cleanup function for the effect's return
+      cleanupRef.current = cleanup;
+    })();
+
+    return () => {
+      destroyed = true;
+      cleanupRef.current();
+    };
   }, [builtRoom, navigate]);
 
   // Sync view distance from Redux store -> React state for canvas sizing + HUD
@@ -224,7 +252,6 @@ export function RoomGameView({
   useEffect(() => {
     if (!builtRoom) return;
     const { store } = builtRoom;
-    // Subscribe to store changes for view distance updates
     const unsubscribe = store.subscribe(() => {
       const entity = selectEntityById(store.getState(), "room");
       const vd = (entity?.state[VIEW_DISTANCE] as number) ?? DEFAULT_VIEW_DISTANCE;
@@ -234,27 +261,34 @@ export function RoomGameView({
   }, [builtRoom]);
   const viewportTiles = viewDistance * 2 + 1;
 
-  // Resize observer — observe container, size canvas to fit viewport tiles
+  // Resize observer — resize pixi renderer
   useEffect(() => {
     const container = containerRef.current;
-    const canvas = canvasRef.current;
-    if (!container || !canvas || !builtRoom) return;
+    const pixiContainer = pixiContainerRef.current;
+    if (!container || !pixiContainer || !builtRoom) return;
 
     function resize() {
-      if (!container || !canvas || !builtRoom) return;
+      if (!container || !pixiContainer || !builtRoom) return;
       const { width, height } = container.getBoundingClientRect();
       const vd = builtRoom.roomEntity.get<number>(VIEW_DISTANCE) ?? DEFAULT_VIEW_DISTANCE;
       const vt = vd * 2 + 1;
       const tilePx = Math.min(MAX_TILE_PX, Math.floor(width / vt), Math.floor(height / vt));
       const side = tilePx * vt;
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = side * dpr;
-      canvas.height = side * dpr;
-      canvas.style.width = `${side}px`;
-      canvas.style.height = `${side}px`;
-      const ctx = canvas.getContext("2d");
-      if (ctx) ctx.scale(dpr, dpr);
+
+      // Pixi manages its own canvas; just update the container size
+      pixiContainer.style.width = `${side}px`;
+      pixiContainer.style.height = `${side}px`;
       sizeRef.current = { w: side, h: side };
+
+      // Resize pixi renderer via its canvas
+      const canvas = pixiContainer.querySelector("canvas");
+      if (canvas) {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = side * dpr;
+        canvas.height = side * dpr;
+        canvas.style.width = `${side}px`;
+        canvas.style.height = `${side}px`;
+      }
     }
 
     resize();
@@ -265,13 +299,13 @@ export function RoomGameView({
 
   // Click handler
   const handleClick = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
+    (e: React.MouseEvent<HTMLDivElement>) => {
       if (!builtRoom) return;
 
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+      const pixiContainer = pixiContainerRef.current;
+      if (!pixiContainer) return;
 
-      const rect = canvas.getBoundingClientRect();
+      const rect = pixiContainer.getBoundingClientRect();
       const screenX = e.clientX - rect.left;
       const screenY = e.clientY - rect.top;
 
@@ -365,10 +399,10 @@ export function RoomGameView({
       {/* Canvas area */}
       <div ref={containerRef} className="relative flex-1 min-h-0 flex items-center justify-center">
         <div className="relative">
-          <canvas
-            ref={canvasRef}
+          <div
+            ref={pixiContainerRef}
             onClick={handleClick}
-className="border-2 border-border rounded-sm cursor-pointer"
+            className="border-2 border-border rounded-sm cursor-pointer"
             style={{ imageRendering: "pixelated" }}
           />
 

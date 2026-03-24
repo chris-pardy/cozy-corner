@@ -25,7 +25,7 @@ export interface Main {
   /** Tags for the base avatar. */
   tags?: string[]
   spriteSheet: BlobRef
-  /** layers of the base avatar */
+  /** Animation layers for the base avatar. A complete base avatar should provide layers for the well-known targets: walk (south/north/east/west), sit (south/north/east/west), hold (south/north/east/west), push (south/north/east/west), pickup (south/north/east/west), and dance. Stand pose reuses walk frame 1. Frame count and frame rate are per-layer. Authoring tools may generate east/west by mirroring. */
   layers: AtCozyCornerDefs.AnimationLayer[]
   /** Lua scripts that define how this avatar base responds to events (e.g. setting animation state based on movement, intercepting move events). */
   behaviors?: AtCozyCornerScript.Script[]

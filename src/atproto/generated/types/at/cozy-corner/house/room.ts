@@ -96,7 +96,7 @@ export interface TilePosition {
   /** The y position of the tile in the room */
   y: number
   /** Tints for the tile */
-  tints?: AtCozyCornerDefs.LayerTint[]
+  tints?: AtCozyCornerDefs.ChannelTint[]
   /** Packed tile transform. Bits 0-1: rotation (0=0°, 1=90°, 2=180°, 3=270°). Bit 2: horizontal mirror. Bit 3: vertical mirror. */
   transform?: number
   /** The layer to render the tile on, 0 = background, 1 = foreground, 2 = overhead */
@@ -124,7 +124,7 @@ export interface RoomItem {
   /** The y position of the item in the room */
   y: number
   /** Tints for the item layers */
-  tints?: AtCozyCornerDefs.LayerTint[]
+  tints?: AtCozyCornerDefs.ChannelTint[]
   transform?: AtCozyCornerDefs.Transform
   /** State values for this placement, overriding variant and stateProperty defaults. */
   state?: AtCozyCornerDefs.StateValue[]
@@ -253,7 +253,7 @@ export interface RoomCritter {
   /** Override display name for this critter instance (e.g. Mr. Whiskers). */
   name?: string
   /** Tints for the critter layers */
-  tints?: AtCozyCornerDefs.LayerTint[]
+  tints?: AtCozyCornerDefs.ChannelTint[]
   /** State values for this critter placement, overriding stateProperty defaults. */
   state?: AtCozyCornerDefs.StateValue[]
 }

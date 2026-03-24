@@ -1,6 +1,6 @@
 import type {
   AnimationLayer,
-  LayerTint,
+  ChannelTint,
   Transform,
 } from "~/atproto/generated/types/at/cozy-corner/defs";
 
@@ -10,7 +10,7 @@ import type {
 export interface AvatarLayerInput {
   image: CanvasImageSource;
   layers: AnimationLayer[];
-  tints: LayerTint[];
+  tints: ChannelTint[];
   transform?: Transform;
 }
 
@@ -24,10 +24,10 @@ export interface BakedLayer {
 // Tint helpers
 // ---------------------------------------------------------------------------
 
-function buildTintMap(tints: LayerTint[]): Map<number, string> {
-  const map = new Map<number, string>();
-  for (const { layerIndexes, tint } of tints) {
-    for (const i of layerIndexes) map.set(i, tint);
+function buildChannelTintMap(tints: ChannelTint[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const { channel, tint } of tints) {
+    map.set(channel, tint);
   }
   return map;
 }
@@ -84,7 +84,7 @@ export function bakeLayer(input: AvatarLayerInput): BakedLayer {
   }
 
   const { image, layers, tints, transform } = input;
-  const tintMap = buildTintMap(tints);
+  const tintMap = buildChannelTintMap(tints);
   const hasTints = tintMap.size > 0;
 
   // Compute bounding box for all layer frames
@@ -124,10 +124,8 @@ export function bakeLayer(input: AvatarLayerInput): BakedLayer {
   }
 
   // Redraw each layer's frames with tint/transform applied
-  // Per-frame transforms are NOT baked — only the per-entity transform is applied
-  for (let li = 0; li < layers.length; li++) {
-    const layer = layers[li];
-    const tint = tintMap.get(li);
+  for (const layer of layers) {
+    const tint = layer.colorChannel ? tintMap.get(layer.colorChannel) : undefined;
 
     for (const frame of layer.frames) {
       const sx = frame.x;

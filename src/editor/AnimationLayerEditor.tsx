@@ -21,7 +21,7 @@ export type AnimationLayerEditorProps = {
   onLayerEvent: (event: LayerEvent) => void;
 };
 
-type ALETool = "position" | "resize" | "rotation";
+type ALETool = "position" | "resize";
 type Scope = "selected" | "all";
 
 const ACTIVE_COLOR = "#22d3ee";
@@ -302,6 +302,7 @@ export function AnimationLayerEditor({
       target,
       frames: [{ x: 0, y: 0, width: defaultW, height: defaultH }],
       frameRate: active?.frameRate ?? 100,
+      zIndex: 0,
     };
     onLayerEvent({ type: "add", layer: newLayer });
     onChangeActiveLayer(layers.length);
@@ -479,7 +480,6 @@ export function AnimationLayerEditor({
 const TOOLS: { id: ALETool; icon: string; label: string }[] = [
   { id: "position", icon: "\u271B", label: "Position" },
   { id: "resize", icon: "\u2922", label: "Resize" },
-  { id: "rotation", icon: "\u21BB", label: "Rotation" },
 ];
 
 // -- Layer property controls --
@@ -515,7 +515,7 @@ function LayerProperties({
   const addFrame = useCallback(() => {
     const last = layer.frames[layer.frames.length - 1];
     const newFrame: AnimationFrame = last
-      ? { ...last, transform: undefined }
+      ? { x: last.x, y: last.y, width: last.width, height: last.height }
       : { x: 0, y: 0, width: 48, height: 48 };
     onChange({ frames: [...layer.frames, newFrame] });
     onSelectFrame(layer.frames.length);
@@ -535,32 +535,6 @@ function LayerProperties({
     onChange({ frames: newFrames });
     onSelectFrame(Math.min(fi, newFrames.length - 1));
   }, [fi, layer.frames, onChange, onSelectFrame]);
-
-  // Rotation: extract degrees from transform
-  const frameRotation = frame?.transform
-    ? Math.round(Math.atan2(frame.transform.b ?? 0, frame.transform.a ?? 1000) * (180 / Math.PI))
-    : 0;
-
-  const setRotation = useCallback(
-    (deg: number) => {
-      if (deg === 0) {
-        onApplyToScope(fi, { transform: undefined });
-      } else {
-        const rad = (deg * Math.PI) / 180;
-        onApplyToScope(fi, {
-          transform: {
-            a: Math.round(Math.cos(rad) * 1000),
-            b: Math.round(Math.sin(rad) * 1000),
-            c: Math.round(-Math.sin(rad) * 1000),
-            d: Math.round(Math.cos(rad) * 1000),
-            e: 0,
-            f: 0,
-          },
-        });
-      }
-    },
-    [fi, onApplyToScope],
-  );
 
   return (
     <div className="ale-props">
@@ -629,20 +603,6 @@ function LayerProperties({
           </Field>
         </div>
       )}
-      {frame && activeTool === "rotation" && (
-        <div className="ale-tool-fields">
-          <Field label="Deg">
-            <NumInput
-              value={frameRotation}
-              onChange={setRotation}
-              min={-360}
-              max={360}
-            />
-            <span className="ale-field-unit">deg</span>
-          </Field>
-        </div>
-      )}
-
       {/* FPS (always visible, layer-level) */}
       <div className="ale-fps-row">
         <Field label="FPS">

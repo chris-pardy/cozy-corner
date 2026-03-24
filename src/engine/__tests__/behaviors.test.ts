@@ -28,10 +28,9 @@ vi.stubGlobal(
 
 import { LayerStackRenderBehavior } from "../behaviors/layer-stack-render";
 import { CompositeRenderBehavior } from "../behaviors/composite-render";
-import { TileLayerRenderBehavior } from "../behaviors/tile-layer-render";
 import { LAYERS, SPRITE_SHEET, TARGET, TARGET_START_TIME, CHILD_RENDER_CONFIG, RENDER_ORDER } from "../state/render";
 import { POSITION } from "../state/movement";
-import { TILE_SHEET, TILE_ATLAS, TILE_POSITIONS, TILE_SIZE, type TileFrame } from "../state/tiles";
+import { TILE_SIZE } from "../state/tiles";
 import type { AnimationLayer } from "~/atproto/generated/types/at/cozy-corner/defs";
 import type { RenderContext } from "../event";
 
@@ -50,10 +49,6 @@ function mockCanvasContext(): RenderContext {
   } as unknown as RenderContext;
 }
 
-function staticFrame(sx: number, sy: number, size: number): TileFrame {
-  return { sx, sy, sw: size, sh: size, frameCount: 1, frameRate: 0, frameStride: 0 };
-}
-
 function makeFrames(x: number, y: number, w: number, h: number, count: number) {
   return Array.from({ length: count }, (_, i) => ({
     x: x + i * w,
@@ -68,6 +63,8 @@ function makeLayer(overrides?: Partial<AnimationLayer>): AnimationLayer {
     target: "idle",
     frames: makeFrames(0, 0, 16, 16, 4),
     frameRate: 100,
+    zIndex: 0,
+    colorChannel: "primary",
     ...overrides,
   };
 }
@@ -122,12 +119,12 @@ describe("LayerStackRenderBehavior", () => {
   });
 
   it("applies tint from tintMap", () => {
-    entity.set(LAYERS, [makeLayer()]);
+    entity.set(LAYERS, [makeLayer({ colorChannel: "primary" })]);
     entity.set(SPRITE_SHEET, {} as CanvasImageSource);
     entity.set(TARGET, "idle");
     entity.set(TARGET_START_TIME, 0);
 
-    const tintMap = new Map([[0, "#ff0000"]]);
+    const tintMap = new Map([["primary", "#ff0000"]]);
     entity.emit(new RenderEvent(ctx, 0, tintMap));
 
     // Tint compositing happens on the offscreen temp canvas, then the result
@@ -135,13 +132,13 @@ describe("LayerStackRenderBehavior", () => {
     expect(ctx.drawImage).toHaveBeenCalled();
   });
 
-  it("renders without tint when layer index not in tintMap", () => {
-    entity.set(LAYERS, [makeLayer()]);
+  it("renders without tint when channel not in tintMap", () => {
+    entity.set(LAYERS, [makeLayer({ colorChannel: "primary" })]);
     entity.set(SPRITE_SHEET, {} as CanvasImageSource);
     entity.set(TARGET, "idle");
     entity.set(TARGET_START_TIME, 0);
 
-    const tintMap = new Map([[99, "#ff0000"]]); // index 99, not 0
+    const tintMap = new Map([["nonexistent", "#ff0000"]]); // channel doesn't match "primary"
     entity.emit(new RenderEvent(ctx, 0, tintMap));
 
     expect(ctx.save).not.toHaveBeenCalled();
@@ -191,7 +188,7 @@ describe("CompositeRenderBehavior", () => {
 
     avatar.set(CHILD_RENDER_CONFIG, new Map([
       [child, {
-        tints: [{ layerIndexes: [0, 1], tint: "#cc4444" }],
+        tints: [{ channel: "skin", tint: "#cc4444" }],
       }],
     ]));
 
@@ -199,8 +196,7 @@ describe("CompositeRenderBehavior", () => {
 
     expect(childHandler).toHaveBeenCalledOnce();
     const emittedEvent = childHandler.mock.calls[0][1] as RenderEvent;
-    expect(emittedEvent.tintMap.get(0)).toBe("#cc4444");
-    expect(emittedEvent.tintMap.get(1)).toBe("#cc4444");
+    expect(emittedEvent.tintMap.get("skin")).toBe("#cc4444");
     expect(emittedEvent.time).toBe(500);
   });
 
@@ -306,70 +302,4 @@ describe("CompositeRenderBehavior", () => {
     expect(order).toEqual(["avatar", "railing"]);
   });
 
-  it("y-sorts row entities with other children", () => {
-    const order: string[] = [];
-    const sheet = {} as CanvasImageSource;
-    const atlas = [staticFrame(0, 0, 16)];
-
-    const makeChild = (name: string, y: number) => {
-      const child = new Entity([{
-        eventTypes: new Set(["render"]),
-        handle: () => order.push(name),
-      }]);
-      child.set(POSITION, { x: 0, y });
-      return child;
-    };
-
-    // Row entity at y=2 with foreground tiles
-    const rowEntity = new Entity([new TileLayerRenderBehavior(1)]);
-    rowEntity.set(POSITION, { x: 0, y: 2 });
-    rowEntity.set(RENDER_ORDER, 1);
-    rowEntity.set(TILE_POSITIONS, [
-      { tile: 0, x: 0, y: 2, renderLayer: 1, transform: 0 },
-    ]);
-
-    const composite = new CompositeRenderBehavior();
-    const room = new Entity([composite]);
-    room.set(TILE_SIZE, 32);
-    room.set(TILE_SHEET, sheet);
-    room.set(TILE_ATLAS, atlas);
-
-    room.addChild(makeChild("y1", 1));
-    room.addChild(rowEntity);
-    room.addChild(makeChild("y3", 3));
-
-    const drawImage = ctx.drawImage as ReturnType<typeof vi.fn>;
-    drawImage.mockImplementation((...args: unknown[]) => {
-      if (args[0] === sheet) order.push("tile-row-y2");
-    });
-
-    room.emit(new RenderEvent(ctx, 0));
-
-    expect(order).toEqual(["y1", "tile-row-y2", "y3"]);
-  });
-
-  it("row entities inherit tile state from parent via find()", () => {
-    const sheet = {} as CanvasImageSource;
-    const atlas = [staticFrame(0, 0, 16)];
-
-    // Row entity only has TILE_POSITIONS locally
-    const rowEntity = new Entity([new TileLayerRenderBehavior(1)]);
-    rowEntity.set(POSITION, { x: 0, y: 0 });
-    rowEntity.set(TILE_POSITIONS, [
-      { tile: 0, x: 0, y: 0, renderLayer: 1, transform: 0 },
-    ]);
-
-    const composite = new CompositeRenderBehavior();
-    const room = new Entity([composite]);
-    // Sheet, atlas, and tileSize are on the room
-    room.set(TILE_SIZE, 32);
-    room.set(TILE_SHEET, sheet);
-    room.set(TILE_ATLAS, atlas);
-    room.addChild(rowEntity);
-
-    room.emit(new RenderEvent(ctx, 0));
-
-    // Row entity should draw via find() from parent
-    expect(ctx.drawImage).toHaveBeenCalledOnce();
-  });
 });

@@ -169,7 +169,7 @@
           "description": "Tints for the tile",
           "items": {
             "type": "ref",
-            "ref": "at.cozy-corner.defs#layerTint"
+            "ref": "at.cozy-corner.defs#channelTint"
           }
         },
         "transform": {
@@ -219,7 +219,7 @@
           "description": "Tints for the item layers",
           "items": {
             "type": "ref",
-            "ref": "at.cozy-corner.defs#layerTint"
+            "ref": "at.cozy-corner.defs#channelTint"
           }
         },
         "transform": {
@@ -398,7 +398,7 @@
           "description": "Tints for the critter layers",
           "items": {
             "type": "ref",
-            "ref": "at.cozy-corner.defs#layerTint"
+            "ref": "at.cozy-corner.defs#channelTint"
           }
         },
         "state": {

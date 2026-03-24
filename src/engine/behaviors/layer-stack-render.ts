@@ -10,6 +10,7 @@ import { TILE_SIZE } from "../state/tiles";
  * Reads LAYERS, SPRITE_SHEET, TARGET, TARGET_START_TIME from the entity.
  * Applies tints from the RenderEvent's tintMap using a temp canvas
  * (multiply tint, then destination-in to restore alpha).
+ * Tints are looked up by the layer's colorChannel name.
  */
 export class LayerStackRenderBehavior implements Behavior {
   readonly eventTypes: ReadonlySet<string> = new Set(["render"]);
@@ -43,8 +44,8 @@ export class LayerStackRenderBehavior implements Behavior {
     const elapsedMS = time - targetStartTime;
     const tileSize = entity.find<number>(TILE_SIZE);
 
-    layers.forEach((layer, index) => {
-      if (layer.target !== target) return;
+    for (const layer of layers) {
+      if (layer.target !== target) continue;
 
       const frameIndex =
         Math.floor(elapsedMS / layer.frameRate) % layer.frames.length;
@@ -60,7 +61,7 @@ export class LayerStackRenderBehavior implements Behavior {
       const dw = fw * scale;
       const dh = fh * scale;
 
-      const tint = tintMap.get(index);
+      const tint = layer.colorChannel ? tintMap.get(layer.colorChannel) : undefined;
       if (tint) {
         const { tmp, tmpCtx } = this.ensureTmp(fw, fh);
         tmpCtx.clearRect(0, 0, fw, fh);
@@ -78,29 +79,11 @@ export class LayerStackRenderBehavior implements Behavior {
         tmpCtx.globalCompositeOperation = "destination-in";
         tmpCtx.drawImage(spriteSheet, sx, sy, fw, fh, 0, 0, fw, fh);
 
-        // 4. Stamp result onto main canvas, with per-frame transform
-        if (frame.transform) {
-          const { a = 1000, b = 0, c = 0, d = 1000, e = 0, f = 0 } = frame.transform;
-          ctx.save();
-          ctx.translate(dw / 2, dh / 2);
-          ctx.transform(a / 1000, b / 1000, c / 1000, d / 1000, e / 1000, f / 1000);
-          ctx.translate(-dw / 2, -dh / 2);
-          ctx.drawImage(tmp, 0, 0, fw, fh, 0, 0, dw, dh);
-          ctx.restore();
-        } else {
-          ctx.drawImage(tmp, 0, 0, fw, fh, 0, 0, dw, dh);
-        }
-      } else if (frame.transform) {
-        const { a = 1000, b = 0, c = 0, d = 1000, e = 0, f = 0 } = frame.transform;
-        ctx.save();
-        ctx.translate(dw / 2, dh / 2);
-        ctx.transform(a / 1000, b / 1000, c / 1000, d / 1000, e / 1000, f / 1000);
-        ctx.translate(-dw / 2, -dh / 2);
-        ctx.drawImage(spriteSheet, sx, sy, fw, fh, 0, 0, dw, dh);
-        ctx.restore();
+        // 4. Stamp result onto main canvas
+        ctx.drawImage(tmp, 0, 0, fw, fh, 0, 0, dw, dh);
       } else {
         ctx.drawImage(spriteSheet, sx, sy, fw, fh, 0, 0, dw, dh);
       }
-    });
+    }
   }
 }

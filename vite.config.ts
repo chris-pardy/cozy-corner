@@ -26,7 +26,11 @@ export default defineConfig({
     ],
     react(),
   ],
-  server: {},
+  server: {
+    watch: {
+      ignored: ['**/routeTree.gen.ts'],
+    },
+  },
   test: {
     environment: 'happy-dom',
     globals: true,

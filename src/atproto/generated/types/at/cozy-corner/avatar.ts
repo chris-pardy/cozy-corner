@@ -16,7 +16,7 @@ export interface Main {
   $type: 'at.cozy-corner.avatar'
   baseAvatar?: ComAtprotoRepoStrongRef.Main
   /** Tints for the base avatar layers */
-  baseAvatarTints?: AtCozyCornerDefs.LayerTint[]
+  baseAvatarTints?: AtCozyCornerDefs.ChannelTint[]
   baseAvatarTransform?: AtCozyCornerDefs.Transform
   /** Equipped wearables in composite order (first = bottom layer). Each entry references a wearable and can override tint/offset. */
   wearables?: EquippedWearable[]
@@ -45,7 +45,7 @@ export interface EquippedWearable {
   $type?: 'at.cozy-corner.avatar#equippedWearable'
   wearable: ComAtprotoRepoStrongRef.Main
   /** Tints for the wearable layers */
-  tints?: AtCozyCornerDefs.LayerTint[]
+  tints?: AtCozyCornerDefs.ChannelTint[]
   transform?: AtCozyCornerDefs.Transform
   /** State values for this equipped wearable, overriding stateProperty defaults. */
   state?: AtCozyCornerDefs.StateValue[]

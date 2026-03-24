@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { AnimationLayer } from "~/atproto/generated/types/at/cozy-corner/defs";
 import {
   getSession,
@@ -10,15 +10,7 @@ import {
   loadImage,
   type Session,
 } from "~/lib/at-protocol";
-import { Entity } from "~/engine/entity";
-import { RenderEvent } from "~/engine/event";
-import { LayerStackRenderBehavior } from "~/engine/behaviors/layer-stack-render";
-import {
-  LAYERS,
-  SPRITE_SHEET,
-  TARGET,
-  TARGET_START_TIME,
-} from "~/engine/state/render";
+import { PixiSpritePreview } from "~/engine/pixi/PixiSpritePreview";
 import { RoomGameView } from "~/atproto/RoomGameView";
 import {
   type EnrichedInventoryEntry,
@@ -63,7 +55,7 @@ function getUniqueTargets(layers: AnimationLayer[]): string[] {
 }
 
 // ---------------------------------------------------------------------------
-// SpritePreview — animated sprite with rAF loop
+// SpritePreview — animated sprite with pixi
 // ---------------------------------------------------------------------------
 
 function SpritePreview({
@@ -77,86 +69,15 @@ function SpritePreview({
   target: string;
   size?: number;
 }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const entityRef = useRef<Entity | null>(null);
-  const rafRef = useRef<number>(0);
-
-  const frameSize = useMemo(() => {
-    let w = 0;
-    let h = 0;
-    for (const layer of layers) {
-      if (layer.target === target && layer.frames.length > 0) {
-        w = Math.max(w, layer.frames[0].width);
-        h = Math.max(h, layer.frames[0].height);
-      }
-    }
-    return { w: w || 1, h: h || 1 };
-  }, [layers, target]);
-
-  useEffect(() => {
-    if (!entityRef.current) {
-      entityRef.current = new Entity([new LayerStackRenderBehavior()]);
-    }
-    const entity = entityRef.current;
-    entity.set(LAYERS, layers);
-    entity.set(SPRITE_SHEET, image);
-    entity.set(TARGET, target);
-    entity.set(TARGET_START_TIME, performance.now());
-  }, [image, layers, target]);
-
-  const scale = Math.max(1, Math.floor(size / Math.max(frameSize.w, frameSize.h)));
-  const cw = frameSize.w * scale;
-  const ch = frameSize.h * scale;
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const entity = entityRef.current;
-    if (!canvas || !entity) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    canvas.width = cw;
-    canvas.height = ch;
-
-    function draw(time: number) {
-      if (!ctx || !entity) return;
-      ctx.clearRect(0, 0, cw, ch);
-
-      const checkSize = scale * 4;
-      for (let cy = 0; cy < ch; cy += checkSize) {
-        for (let cx = 0; cx < cw; cx += checkSize) {
-          ctx.fillStyle =
-            (Math.floor(cx / checkSize) + Math.floor(cy / checkSize)) % 2 === 0
-              ? "#1a2035"
-              : "#141a2e";
-          ctx.fillRect(cx, cy, checkSize, checkSize);
-        }
-      }
-
-      ctx.save();
-      ctx.imageSmoothingEnabled = false;
-      ctx.scale(scale, scale);
-      const renderEvent = new RenderEvent(ctx, time);
-      entity.emit(renderEvent);
-      ctx.restore();
-
-      rafRef.current = requestAnimationFrame(draw);
-    }
-
-    rafRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [cw, ch, scale]);
-
+  const previewLayers = useMemo(
+    () => [{ image, layers }],
+    [image, layers],
+  );
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        display: "block",
-        imageRendering: "pixelated",
-        width: cw,
-        height: ch,
-      }}
+    <PixiSpritePreview
+      previewLayers={previewLayers}
+      target={target}
+      size={size}
     />
   );
 }

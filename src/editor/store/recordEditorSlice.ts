@@ -36,7 +36,7 @@ export interface RecordEditorState {
   nextVariantId: number;
 
   // Wearable-specific
-  previewBaseRef: { uri: string; cid: string } | null;
+  baseAvatarRef: { uri: string; cid: string } | null;
 
   // Tileset-specific
   tiles: TileData[];
@@ -59,7 +59,7 @@ export function createRecordEditorInitialState(
     stateProperties: [],
     variants: [],
     nextVariantId: 1,
-    previewBaseRef: null,
+    baseAvatarRef: null,
     tiles: [],
     nextTileId: 1,
     ...overrides,
@@ -193,11 +193,11 @@ export const recordEditorSlice = createSlice({
     },
 
     // Wearable-specific
-    setPreviewBaseRef(
+    setBaseAvatarRef(
       state,
       action: PayloadAction<{ uri: string; cid: string } | null>,
     ) {
-      state.previewBaseRef = action.payload;
+      state.baseAvatarRef = action.payload;
     },
 
     // Tiles (Tileset editor)
@@ -239,7 +239,7 @@ export const {
   removeVariant,
   updateVariant,
   updateVariantDimension,
-  setPreviewBaseRef,
+  setBaseAvatarRef,
   addTile,
   removeTile,
   updateTile,
