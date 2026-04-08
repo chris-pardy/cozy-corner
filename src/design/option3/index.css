@@ -1,0 +1,239 @@
+@import "../../theme/index.css";
+
+/*
+ * Starlit Workshop — Design Showcase Styles
+ * Decorative/component styles specific to this showcase page.
+ * Theme tokens are imported from src/theme/.
+ */
+
+/* ── Star field background (dark) ── */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background: var(--color-background);
+  transition: background-color 0.4s ease;
+  box-shadow:
+    120px 60px 0 0.5px rgba(251, 191, 36, 0.9),
+    340px 140px 0 0.5px rgba(251, 191, 36, 0.7),
+    560px 40px 0 1px rgba(251, 191, 36, 0.8),
+    80px 320px 0 0.5px rgba(232, 224, 248, 0.6),
+    420px 280px 0 0.5px rgba(96, 165, 250, 0.7),
+    700px 180px 0 1px rgba(251, 191, 36, 0.6),
+    200px 480px 0 0.5px rgba(232, 224, 248, 0.5),
+    900px 90px 0 0.5px rgba(251, 191, 36, 0.8),
+    640px 360px 0 0.5px rgba(96, 165, 250, 0.6),
+    1050px 200px 0 1px rgba(251, 191, 36, 0.7),
+    50px 150px 0 0.3px rgba(232, 224, 248, 0.3),
+    280px 50px 0 0.3px rgba(232, 224, 248, 0.25),
+    480px 220px 0 0.3px rgba(232, 224, 248, 0.3),
+    160px 400px 0 0.3px rgba(232, 224, 248, 0.2),
+    620px 110px 0 0.3px rgba(232, 224, 248, 0.35),
+    800px 300px 0 0.3px rgba(232, 224, 248, 0.25),
+    180px 260px 0 0.4px rgba(96, 165, 250, 0.5),
+    520px 160px 0 0.4px rgba(96, 165, 250, 0.4),
+    860px 380px 0 0.4px rgba(96, 165, 250, 0.5),
+    300px 340px 0 0.4px rgba(245, 158, 11, 0.5),
+    680px 260px 0 0.4px rgba(245, 158, 11, 0.4);
+}
+
+:root[data-theme="light"] body::before {
+  box-shadow:
+    120px 60px 0 0.5px rgba(184, 134, 11, 0.15),
+    340px 140px 0 0.5px rgba(184, 134, 11, 0.12),
+    560px 40px 0 1px rgba(184, 134, 11, 0.14),
+    80px 320px 0 0.5px rgba(192, 192, 216, 0.4),
+    420px 280px 0 0.5px rgba(59, 110, 199, 0.15),
+    700px 180px 0 1px rgba(184, 134, 11, 0.1),
+    200px 480px 0 0.5px rgba(192, 192, 216, 0.35),
+    900px 90px 0 0.5px rgba(184, 134, 11, 0.14),
+    640px 360px 0 0.5px rgba(59, 110, 199, 0.12),
+    1050px 200px 0 1px rgba(184, 134, 11, 0.12),
+    50px 150px 0 0.3px rgba(192, 192, 216, 0.35),
+    280px 50px 0 0.3px rgba(192, 192, 216, 0.3),
+    480px 220px 0 0.3px rgba(192, 192, 216, 0.35),
+    160px 400px 0 0.3px rgba(192, 192, 216, 0.25),
+    620px 110px 0 0.3px rgba(192, 192, 216, 0.4),
+    800px 300px 0 0.3px rgba(192, 192, 216, 0.3),
+    180px 260px 0 0.4px rgba(59, 110, 199, 0.12),
+    520px 160px 0 0.4px rgba(59, 110, 199, 0.1),
+    860px 380px 0 0.4px rgba(59, 110, 199, 0.12),
+    300px 340px 0 0.4px rgba(212, 150, 12, 0.12),
+    680px 260px 0 0.4px rgba(212, 150, 12, 0.1);
+}
+
+/* ── Gold glow at top ── */
+
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 300px;
+  z-index: -1;
+  background: radial-gradient(
+    ellipse 80% 200px at 50% 0%,
+    rgba(251, 191, 36, 0.06) 0%,
+    rgba(251, 191, 36, 0.02) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+:root[data-theme="light"] body::after {
+  background: radial-gradient(
+    ellipse 80% 200px at 50% 0%,
+    rgba(184, 134, 11, 0.06) 0%,
+    rgba(184, 134, 11, 0.02) 40%,
+    transparent 70%
+  );
+}
+
+/* ── Animations ── */
+
+@keyframes twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes twinkle-slow {
+  0%, 100% { opacity: 0.8; }
+  33% { opacity: 0.2; }
+  66% { opacity: 0.6; }
+}
+
+@keyframes gold-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 4px rgba(251, 191, 36, 0.3), 0 0 8px rgba(251, 191, 36, 0.1); }
+  50% { box-shadow: 0 0 8px rgba(251, 191, 36, 0.5), 0 0 16px rgba(251, 191, 36, 0.2); }
+}
+
+@keyframes pulse-glow-light {
+  0%, 100% { box-shadow: 0 0 4px rgba(184, 134, 11, 0.2), 0 0 8px rgba(184, 134, 11, 0.08); }
+  50% { box-shadow: 0 0 8px rgba(184, 134, 11, 0.35), 0 0 16px rgba(184, 134, 11, 0.15); }
+}
+
+@keyframes float-gentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+.twinkle { animation: twinkle 3s ease-in-out infinite; }
+.twinkle-slow { animation: twinkle-slow 5s ease-in-out infinite; }
+.twinkle-delay-1 { animation-delay: 0.8s; }
+.twinkle-delay-2 { animation-delay: 1.6s; }
+.twinkle-delay-3 { animation-delay: 2.4s; }
+.pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+:root[data-theme="light"] .pulse-glow { animation-name: pulse-glow-light; }
+.float-gentle { animation: float-gentle 4s ease-in-out infinite; }
+
+.gold-shimmer {
+  background: linear-gradient(90deg, var(--color-gold) 0%, #fde68a 25%, var(--color-gold) 50%, #fde68a 75%, var(--color-gold) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: gold-shimmer 4s linear infinite;
+}
+
+:root[data-theme="light"] .gold-shimmer {
+  background: linear-gradient(90deg, var(--color-gold) 0%, #d4960c 25%, var(--color-gold) 50%, #d4960c 75%, var(--color-gold) 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Showcase Components ── */
+
+.star-dot {
+  width: 4px;
+  height: 4px;
+  background: var(--color-gold);
+  border-radius: 0;
+  image-rendering: pixelated;
+  box-shadow: 0 0 4px rgba(251, 191, 36, 0.6);
+}
+:root[data-theme="light"] .star-dot { box-shadow: 0 0 4px rgba(184, 134, 11, 0.5); }
+
+.star-dot-sm {
+  width: 2px;
+  height: 2px;
+  background: var(--color-gold);
+  border-radius: 0;
+}
+
+.constellation-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.3), transparent);
+}
+:root[data-theme="light"] .constellation-line {
+  background: linear-gradient(90deg, transparent, rgba(184, 134, 11, 0.3), transparent);
+}
+
+.blueprint-grid {
+  background-image: linear-gradient(rgba(42, 42, 94, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(42, 42, 94, 0.3) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+:root[data-theme="light"] .blueprint-grid {
+  background-image: linear-gradient(rgba(59, 110, 199, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(59, 110, 199, 0.1) 1px, transparent 1px);
+}
+
+.card-blueprint {
+  position: relative;
+  border: 1px solid var(--color-surface-border);
+  background: var(--color-surface);
+}
+.card-blueprint::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px dashed rgba(42, 42, 94, 0.6);
+  pointer-events: none;
+  border-radius: 2px;
+}
+:root[data-theme="light"] .card-blueprint::before { border-color: rgba(192, 192, 216, 0.6); }
+
+.craft-slot {
+  width: 48px;
+  height: 48px;
+  background: var(--color-surface-muted);
+  border: 2px solid var(--color-surface-border);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s;
+}
+.craft-slot:hover { border-color: var(--color-gold); }
+.craft-slot-filled { border-color: rgba(251, 191, 36, 0.3); }
+:root[data-theme="light"] .craft-slot-filled { border-color: rgba(184, 134, 11, 0.3); }
+
+.craft-output {
+  width: 56px;
+  height: 56px;
+  background: var(--color-surface-muted);
+  border: 2px solid var(--color-gold);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+:root[data-theme="light"] .craft-output { animation-name: pulse-glow-light; }
+
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-surface-border), rgba(251, 191, 36, 0.3), var(--color-surface-border), transparent);
+  margin: 3rem 0;
+}
+:root[data-theme="light"] .section-divider {
+  background: linear-gradient(90deg, transparent, var(--color-surface-border), rgba(184, 134, 11, 0.3), var(--color-surface-border), transparent);
+}

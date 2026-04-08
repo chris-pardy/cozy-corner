@@ -1,0 +1,17 @@
+{
+    "lexicon": 1,
+    "id": "at.cozy-corner.api.roomState",
+    "defs": {
+        "roomState": {
+            "type": "object",
+            "description": "The state of a room",
+            "required": ["roomId"],
+            "properties": {
+                "roomId": {
+                    "type": "string",
+                    "description": "The ID of the room to get the state of"
+                }
+            }
+        }
+    }
+}

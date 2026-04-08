@@ -1,0 +1,5 @@
+[serve.static]
+plugins = ["bun-plugin-tailwind"]
+
+[serve]
+hostname = "0.0.0.0"

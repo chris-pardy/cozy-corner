@@ -1,8 +1,8 @@
 services:
   pds:
-    image: ghcr.io/bluesky-social/pds:0.4
+    image: ghcr.io/bluesky-social/pds:latest
     ports:
-      - "2583:3000"
+      - "2583:2583"
     volumes:
       - pds-data:/pds
     env_file:

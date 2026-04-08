@@ -5,7 +5,7 @@ import { type ValidationResult, BlobRef } from '@atproto/lexicon'
 import { CID } from 'multiformats/cid'
 import { validate as _validate } from '../../../lexicons'
 import { type $Typed, is$typed as _is$typed, type OmitKey } from '../../../util'
-import type * as AtCozyCornerDefs from './defs.js'
+import type * as ComAtprotoRepoStrongRef from '../../com/atproto/repo/strongRef.js'
 
 const is$typed = _is$typed,
   validate = _validate
@@ -19,7 +19,7 @@ export interface Main {
   description?: string
   /** Preview image for the starter pack. */
   splash?: BlobRef
-  entries?: AtCozyCornerDefs.CategorizedEntry[]
+  entries?: CategorizedEntry[]
   createdAt: string
   [k: string]: unknown
 }
@@ -38,4 +38,28 @@ export {
   type Main as Record,
   isMain as isRecord,
   validateMain as validateRecord,
+}
+
+/** An entry in a category. */
+export interface CategorizedEntry {
+  $type?: 'at.cozy-corner.starterPack#categorizedEntry'
+  item: ComAtprotoRepoStrongRef.Main
+  /** The category of the entry. */
+  category:
+    | 'item'
+    | 'wearable'
+    | 'tileset'
+    | 'baseAvatar'
+    | 'npc'
+    | (string & {})
+}
+
+const hashCategorizedEntry = 'categorizedEntry'
+
+export function isCategorizedEntry<V>(v: V) {
+  return is$typed(v, id, hashCategorizedEntry)
+}
+
+export function validateCategorizedEntry<V>(v: V) {
+  return validate<CategorizedEntry & V>(v, id, hashCategorizedEntry)
 }

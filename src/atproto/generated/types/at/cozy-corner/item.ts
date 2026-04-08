@@ -6,7 +6,6 @@ import { CID } from 'multiformats/cid'
 import { validate as _validate } from '../../../lexicons'
 import { type $Typed, is$typed as _is$typed, type OmitKey } from '../../../util'
 import type * as AtCozyCornerDefs from './defs.js'
-import type * as AtCozyCornerScript from './script.js'
 
 const is$typed = _is$typed,
   validate = _validate
@@ -25,7 +24,7 @@ export interface Main {
   /** Alternative visual appearances for this item. Each variant has a name and can set initial state values. */
   variants: Variant[]
   /** Lua scripts that define how this item responds to events. */
-  behaviors?: AtCozyCornerScript.Script[]
+  behaviors?: AtCozyCornerDefs.Behavior[]
   /** Declares the configurable state properties for this item. Behaviors read these via entityState; variants and placements can override values. */
   stateProperties?: AtCozyCornerDefs.StateProperty[]
   createdAt: string
@@ -51,9 +50,11 @@ export {
 /** A named visual variant for an item. Sets spatial properties and can override state values. */
 export interface Variant {
   $type?: 'at.cozy-corner.item#variant'
+  /** The unique id of the variant (unique within the item) */
+  id: string
   /** Display name for this variant. */
   name: string
-  /** The layer target of the layers to render for this variant. */
+  /** The default layer target of the layers to render for this variant. */
   target: string
   /** Width of the item in tiles. */
   itemWidth?: number

@@ -23,9 +23,9 @@
             "maxSize": 1000000
           },
           "entry": {
-            "type": "ref",
-            "ref": "com.atproto.repo.strongRef",
-            "description": "Strong reference to the entry room record (at.cozy-corner.house.room). Visitors spawn in this room's spawn area."
+            "type": "string",
+            "format": "at-uri",
+            "description": "Reference to the entry room record (at.cozy-corner.house.room). Visitors spawn in this room's spawn area."
           },
           "createdAt": {
             "type": "string",

@@ -47,6 +47,8 @@ export {
 /** A tile in the tileset */
 export interface Tile {
   $type?: 'at.cozy-corner.tileset#tile'
+  /** The unique id of the tile (unique within the tileset) */
+  id: string
   /** The name of the tile */
   name: string
   /** The target of the tile in the layers */

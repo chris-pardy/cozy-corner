@@ -1,0 +1,386 @@
+{
+  "lexicon": 1,
+  "id": "at.cozy-corner.api.actions",
+  "defs": {
+    "roomAction": {
+      "type": "object",
+      "description": "Actions for the Cozy Corner API",
+      "required": ["roomId", "action"],
+      "properties": {
+        "roomId": {
+          "type": "string",
+          "description": "The ID of the room to perform the action in"
+        },
+        "action": {
+          "type": "union",
+          "refs": [
+            "#move",
+            "#interact",
+            "#say",
+            "#exit",
+            "#prompt",
+            "#promptResponse",
+            "#cutscene",
+            "#endCutscene",
+            "#animate",
+            "#camera",
+            "#resetCamera",
+            "#open",
+            "#state",
+            "#attributes"
+          ]
+        }
+      }
+    },
+    "move": {
+      "type": "object",
+      "description": "Move an entity to a new position",
+      "required": ["action", "x", "y"],
+      "properties": {
+        "action": {
+          "type": "literal",
+          "value": "move"
+        },
+        "targetId": {
+            "type": "string",
+            "description": "The ID of the entity to move"
+        },
+        "x": {
+          "type": "integer",
+          "description": "The x position to move to"
+        },
+        "y": {
+          "type": "integer",
+          "description": "The y position to move to"
+        }
+      }
+    },
+    "interact": {
+        "type": "object",
+        "description": "interact with an entity",
+        "required": ["action", "targetId"],
+        "properties": {
+            "action": {
+                "type": "literal",
+                "value": "interact"
+            },
+            "targetId": {
+                "type": "string",
+                "description": "The ID of the entity to interact with"
+            }
+        }
+    },
+    "say": {
+        "type": "object",
+        "description": "emote",
+        "required": ["action", "emote"],
+        "properties": {
+            "action": {
+                "type": "literal",
+                "value": "say"
+            },
+            "emote": {
+                "type": "string",
+                "description": "The emote to perform"
+            },
+            "type": {
+                "type": "string",
+                "description": "The type of emote to perform",
+                "enum": ["speech", "thought"]
+            }
+        }
+    },
+    "exit": {
+        "type": "object",
+        "description": "exit a room",
+        "required": ["action"],
+        "properties": {
+            "action": {
+                "type": "literal",
+                "value": "exit"
+            },
+            "targetId": {
+                "type": "string",
+                "description": "The ID of the entity to exit"
+            }
+        }
+    },
+    "prompt": {
+        "type": "object",
+        "description": "prompt the user for input",
+        "required": ["action","promptId","prompt"],
+        "properties": {
+            "action": {
+                "type": "literal",
+                "value": "prompt"
+            },
+            "promptId": {
+                "type": "string",
+                "description": "The ID of the prompt"
+            },
+            "targetId": {
+                "type": "string",
+                "description": "The ID of the entity to prompt"
+            },
+            "prompt": {
+                "type": "string",
+                "description": "The prompt to display to the user"
+            },
+            "options": {
+                "type": "array",
+                "description": "The options to display to the user",
+                "items": {
+                    "type": "string",
+                    "description": "The option to display to the user"
+                }
+            },
+            "allowFreeText": {
+                "type": "boolean",
+                "description": "Whether the user is allowed to enter free text",
+                "default": false
+            }
+        }
+    },
+    "promptResponse": {
+        "type": "object",
+        "description": "response to a prompt",
+        "required": ["action","promptId"],
+        "properties": {
+            "action": {
+                "type": "literal",
+                "value": "promptResponse"
+            },
+            "promptId": {
+                "type": "string",
+                "description": "The ID of the prompt"
+            },
+            "response": {
+                "type": "string",
+                "description": "The response to the prompt"
+            }
+        }
+    },
+    "cutscene": {
+        "type": "object",
+        "description": "start a cutscene",
+        "required": ["action","cutsceneId", "timeout"],
+        "properties": {
+            "action": {
+                "type": "literal",
+                "value": "cutscene"
+            },
+            "targetId": {
+                "type": "string",
+                "description": "The ID of the entity to start the cutscene with"
+            },
+            "cutsceneId": {
+                "type": "string",
+                "description": "The ID of the cutscene to start"
+            },
+            "timeout": {
+                "type": "integer",
+                "description": "The timeout in milliseconds for the cutscene",
+                "default": 10000
+            }
+        }
+    },
+    "endCutscene": {
+        "type": "object",
+        "description": "end a cutscene",
+        "required": ["action","cutsceneId"],
+        "properties": {
+            "action": {
+                "type": "literal",
+                "value": "endCutscene"
+            },
+            "cutsceneId": {
+                "type": "string",
+                "description": "The ID of the cutscene to end"
+            }
+        }
+    },
+    "animate": {
+        "type": "object",
+        "description": "set the animation target of an entity",
+        "required": ["action","targetId", "animation"],
+        "properties": {
+            "action": {
+                "type": "literal",
+                "value": "setTarget"
+            },
+            "targetId": {
+                "type": "string",
+                "description": "The ID of the entity to set the target of"
+            },
+            "animation": {
+                "type": "string",
+                "description": "The target to set the entity to"
+            }
+        }
+    },
+    "camera": {
+        "type": "object",
+        "description": "perform a camera action",
+        "required": ["action", "cameraId"],
+        "properties": {
+            "action": {
+                "type": "literal",
+                "value": "camera"
+            },
+            "cameraId": {
+                "type": "string",
+                "description": "The ID of the pan to perform"
+            },
+            "targetId": {
+                "type": "string",
+                "description": "The ID of the entity's camera to move"
+            },
+            "x": {
+                "type": "integer",
+                "description": "The x position to pan the camera to"
+            },
+            "y": {
+                "type": "integer",
+                "description": "The y position to pan the camera to"
+            },
+            "radius": {
+                "type": "integer",
+                "description": "The radius to pan the camera to"
+            },
+            "duration": {
+                "type": "integer",
+                "description": "The duration in milliseconds to pan the camera to"
+            },
+            "attachId": {
+                "type": "string",
+                "description": "The ID of the entity to follow"
+            }
+        }
+    },
+    "resetCamera": {
+        "type": "object",
+        "description": "reset the camera to a new position",
+        "required": ["action","cameraId"],
+        "properties": {
+            "action": {
+                "type": "literal",
+                "value": "resetCamera"
+            },
+            "cameraId": {
+                "type": "string",
+                "description": "The camera ID to reset"
+            }
+        }
+    },
+    "open": {
+        "type": "object",
+        "description": "open a resource",
+        "requires": ["action"],
+        "properties": {
+            "action": {
+                "type": "literal",
+                "value": "open"
+            },
+            "targetId": {
+                "type": "string",
+                "description": "The ID of the entity to open the resource for"
+            },
+            "blob": {
+                "type": "blob",
+                "description": "The blob to open",
+                "accept": ["image/png", "image/webp", "image/jpeg", "video/mp4", "audio/mpeg", "audio/ogg", "audio/wav"]
+            },
+            "uri": {
+                "type": "string",
+                "format": "at-uri",
+                "description": "The URI of the resource to open"
+            },
+            "url": {
+                "type": "string",
+                "format": "url",
+                "description": "The default url to open, fallback if no handler for the uri is defined"
+            }
+        }
+    },
+    "state": {
+        "type": "object",
+        "description": "set state values on an entity",
+        "required": ["action", "values"],
+        "properties": {
+            "action": {
+                "type": "literal",
+                "value": "state"
+            },
+            "targetId": {
+                "type": "string",
+                "description": "The ID of the entity to set the state on"
+            },
+            "values": {
+                "type": "array",
+                "description": "The values to set on the entity",
+                "items": {
+                    "type": "ref",
+                    "ref": "#stateValue"
+                }
+            }
+        }
+    },
+    "stateValue": {
+        "type": "object",
+        "description": "set a state value on an entity",
+        "required": ["name", "value"],
+        "properties": {
+            "name": {
+                "type": "string",
+                "description": "The name of the state to set"
+            },
+            "value": {
+                "type": "any",
+                "description": "The value of the state to set"
+            }
+        }
+    },
+    "attributes": {
+        "type": "object",
+        "description": "set attributes on tiles",
+        "required": ["action", "attributes"],
+        "properties": {
+            "action": {
+                "type": "literal",
+                "value": "attributes"
+            },
+            "attributes": {
+                "type": "array",
+                "description": "The attributes to set on the tiles",
+                "items": {
+                    "type": "ref",
+                    "ref": "#attribute"
+                }
+            }
+        }
+    },
+    "attribute": {
+        "type": "object",
+        "description": "set an attribute on a tile",
+        "required": ["name", "value", "x", "y"],
+        "properties": {
+            "name": {
+                "type": "string",
+                "description": "The name of the attribute to set"
+            },
+            "value": {
+                "type": "integer",
+                "description": "The value of the attribute to set"
+            },
+            "x": {
+                "type": "integer",
+                "description": "The x position of the tile to set the attribute on"
+            },
+            "y": {
+                "type": "integer",
+                "description": "The y position of the tile to set the attribute on"
+            }
+        }
+    }
+  }
+}

@@ -14,11 +14,12 @@ const id = 'at.cozy-corner.avatar'
 
 export interface Main {
   $type: 'at.cozy-corner.avatar'
-  baseAvatar?: ComAtprotoRepoStrongRef.Main
+  /** Display name for the avatar. */
+  name?: string
+  baseAvatar: ComAtprotoRepoStrongRef.Main
   /** Tints for the base avatar layers */
   baseAvatarTints?: AtCozyCornerDefs.ChannelTint[]
-  baseAvatarTransform?: AtCozyCornerDefs.Transform
-  /** Equipped wearables in composite order (first = bottom layer). Each entry references a wearable and can override tint/offset. */
+  /** Equipped wearables in composite order (first = bottom layer). Behind layers are composited in revere order */
   wearables?: EquippedWearable[]
   createdAt: string
   [k: string]: unknown
@@ -46,7 +47,6 @@ export interface EquippedWearable {
   wearable: ComAtprotoRepoStrongRef.Main
   /** Tints for the wearable layers */
   tints?: AtCozyCornerDefs.ChannelTint[]
-  transform?: AtCozyCornerDefs.Transform
   /** State values for this equipped wearable, overriding stateProperty defaults. */
   state?: AtCozyCornerDefs.StateValue[]
 }

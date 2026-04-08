@@ -5,7 +5,6 @@ import { type ValidationResult, BlobRef } from '@atproto/lexicon'
 import { CID } from 'multiformats/cid'
 import { validate as _validate } from '../../../lexicons'
 import { type $Typed, is$typed as _is$typed, type OmitKey } from '../../../util'
-import type * as ComAtprotoRepoStrongRef from '../../com/atproto/repo/strongRef.js'
 
 const is$typed = _is$typed,
   validate = _validate
@@ -39,6 +38,10 @@ export interface AnimationLayer {
   $type?: 'at.cozy-corner.defs#animationLayer'
   /** Animation state identifier. For base avatars and wearables, use the well-known directional targets: walk-south, walk-north, walk-east, walk-west, sit-south, sit-north, sit-east, sit-west, hold-south, hold-north, hold-east, hold-west, push-south, push-north, push-east, push-west, pickup-south, pickup-north, pickup-east, pickup-west, and dance. Frame count and frame rate are defined per layer — authors choose their own animation detail level. For items, this is the variant name. */
   target:
+    | 'idle-south'
+    | 'idle-north'
+    | 'idle-east'
+    | 'idle-west'
     | 'walk-south'
     | 'walk-north'
     | 'walk-east'
@@ -100,33 +103,6 @@ export function isChannelTint<V>(v: V) {
 
 export function validateChannelTint<V>(v: V) {
   return validate<ChannelTint & V>(v, id, hashChannelTint)
-}
-
-/** 2D affine transform for wearables and other sprite-like entities. Components map directly to a CanvasRenderingContext2D-style transform(a, b, c, d, e, f). Values are stored as fixed-point integers where 1000 = 1.0 (e.g. 1500 = 1.5, -500 = -0.5). If omitted, the identity transform is used. */
-export interface Transform {
-  $type?: 'at.cozy-corner.defs#transform'
-  /** Scale X / cos/skew component, fixed-point where 1000 = 1.0. Default 1000. */
-  a: number
-  /** Skew Y component, fixed-point where 1000 = 1.0. Default 0. */
-  b: number
-  /** Skew X component, fixed-point where 1000 = 1.0. Default 0. */
-  c: number
-  /** Scale Y component, fixed-point where 1000 = 1.0. Default 1000. */
-  d: number
-  /** Translate X in avatar or world coordinate units, fixed-point where 1000 = 1.0 unit. Default 0. */
-  e: number
-  /** Translate Y in avatar or world coordinate units, fixed-point where 1000 = 1.0 unit. Default 0. */
-  f: number
-}
-
-const hashTransform = 'transform'
-
-export function isTransform<V>(v: V) {
-  return is$typed(v, id, hashTransform)
-}
-
-export function validateTransform<V>(v: V) {
-  return validate<Transform & V>(v, id, hashTransform)
 }
 
 /** A named attribute with a value from 0–200 representing –100 to +100 (shifted positive). Used on critters and items to express attraction/repulsion to tile-emitted signals. */
@@ -207,26 +183,22 @@ export function validateStateValue<V>(v: V) {
   return validate<StateValue & V>(v, id, hashStateValue)
 }
 
-/** An entry in a category. */
-export interface CategorizedEntry {
-  $type?: 'at.cozy-corner.defs#categorizedEntry'
-  item: ComAtprotoRepoStrongRef.Main
-  /** The category of the entry. */
-  category:
-    | 'item'
-    | 'wearable'
-    | 'tileset'
-    | 'baseAvatar'
-    | 'critter'
-    | (string & {})
+export interface Behavior {
+  $type?: 'at.cozy-corner.defs#behavior'
+  /** Name for the script. */
+  name: string
+  /** Inline Lua source code. Mutually exclusive with codeBlob. */
+  code?: string
+  /** Lua source code stored as a blob. Mutually exclusive with code. */
+  codeBlob?: BlobRef
 }
 
-const hashCategorizedEntry = 'categorizedEntry'
+const hashBehavior = 'behavior'
 
-export function isCategorizedEntry<V>(v: V) {
-  return is$typed(v, id, hashCategorizedEntry)
+export function isBehavior<V>(v: V) {
+  return is$typed(v, id, hashBehavior)
 }
 
-export function validateCategorizedEntry<V>(v: V) {
-  return validate<CategorizedEntry & V>(v, id, hashCategorizedEntry)
+export function validateBehavior<V>(v: V) {
+  return validate<Behavior & V>(v, id, hashBehavior)
 }

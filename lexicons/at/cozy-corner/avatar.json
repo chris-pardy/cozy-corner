@@ -4,16 +4,22 @@
   "defs": {
     "main": {
       "type": "record",
-      "description": "A user's avatar. One per DID. The base body is a built-in greyscale walk sprite tinted by the tint color. Wearables composite on top in array order.",
+      "description": "A user's avatar. One per DID. Wearables composite in array order.",
       "key": "literal:self",
       "record": {
         "type": "object",
-        "required": ["createdAt"],
+        "required": ["baseAvatar", "createdAt"],
         "properties": {
+          "name": {
+            "type": "string",
+            "minGraphemes": 1,
+            "maxGraphemes": 64,
+            "description": "Display name for the avatar."
+          },
           "baseAvatar": {
             "type": "ref",
             "ref": "com.atproto.repo.strongRef",
-            "description": "Strong reference to the base avatar record."
+            "description": "Reference to the base avatar record."
           },
           "baseAvatarTints": {
             "type": "array",
@@ -23,14 +29,9 @@
               "ref": "at.cozy-corner.defs#channelTint"
             }
           },
-          "baseAvatarTransform": {
-            "type": "ref",
-            "ref": "at.cozy-corner.defs#transform",
-            "description": "Optional 2D affine transform applied when compositing the base avatar, stored as a fixed-point matrix (see at.cozy-corner.defs#wearableTransform)."
-          },
           "wearables": {
             "type": "array",
-            "description": "Equipped wearables in composite order (first = bottom layer). Each entry references a wearable and can override tint/offset.",
+            "description": "Equipped wearables in composite order (first = bottom layer). Behind layers are composited in revere order",
             "maxLength": 32,
             "items": {
               "type": "ref",
@@ -52,7 +53,7 @@
         "wearable": {
           "type": "ref",
           "ref": "com.atproto.repo.strongRef",
-          "description": "Strong reference to the wearable record."
+          "description": "Reference to the wearable record."
         },
         "tints": {
           "type": "array",
@@ -61,11 +62,6 @@
             "type": "ref",
             "ref": "at.cozy-corner.defs#channelTint"
           }
-        },
-        "transform": {
-          "type": "ref",
-          "ref": "at.cozy-corner.defs#transform",
-          "description": "Optional 2D affine transform applied when compositing this wearable, stored as a fixed-point matrix (see at.cozy-corner.defs#wearableTransform)."
         },
         "state": {
           "type": "array",

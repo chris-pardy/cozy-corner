@@ -12,7 +12,7 @@
         "properties": {
           "name": {
             "type": "string",
-            "maxLength": 640,
+            "minGraphemes": 2,
             "maxGraphemes": 64,
             "description": "Display name for the base avatar."
           },
@@ -39,7 +39,7 @@
           },
           "layers": {
             "type": "array",
-            "description": "Animation layers for the base avatar. A complete base avatar should provide layers for the well-known targets: walk (south/north/east/west), sit (south/north/east/west), hold (south/north/east/west), push (south/north/east/west), pickup (south/north/east/west), and dance. Stand pose reuses walk frame 1. Frame count and frame rate are per-layer. Authoring tools may generate east/west by mirroring.",
+            "description": "Animation layers for the base avatar. A complete base avatar should provide layers for the well-known targets: idle (south/north/east/west), walk (south/north/east/west), sit (south/north/east/west), hold (south/north/east/west), push (south/north/east/west), pickup (south/north/east/west), and dance. Frame count and frame rate are per-layer. Authoring tools may generate east/west by mirroring.",
             "items": {
               "type": "ref",
               "ref": "at.cozy-corner.defs#animationLayer"
@@ -50,7 +50,7 @@
             "description": "Lua scripts that define how this avatar base responds to events (e.g. setting animation state based on movement, intercepting move events).",
             "items": {
               "type": "ref",
-              "ref": "at.cozy-corner.script#script"
+              "ref": "at.cozy-corner.defs#behavior"
             },
             "maxLength": 16
           },

@@ -1,0 +1,121 @@
+/*
+ * Starlit Workshop — Design Tokens
+ * Cozy Corner Design System
+ *
+ * Deep indigo/navy base with gold star accents.
+ * Geometric, precise, crafted — like a celestial workshop.
+ */
+
+@theme {
+  /* ── Typography ── */
+  --font-heading: "Pixelify Sans", monospace;
+  --font-body: "JetBrains Mono", monospace;
+  --font-sans: "JetBrains Mono", monospace;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* ── Border Radii — crisp pixel aesthetic ── */
+  --radius-lg: 4px;
+  --radius-md: 3px;
+  --radius-sm: 2px;
+
+  /* ── Semantic Colors (Dark — default) ── */
+  --color-background: #08081a;
+  --color-foreground: #e8e0f8;
+
+  --color-card: #10102a;
+  --color-card-foreground: #e8e0f8;
+
+  --color-popover: #10102a;
+  --color-popover-foreground: #e8e0f8;
+
+  --color-primary: #fbbf24;
+  --color-primary-foreground: #08081a;
+
+  --color-secondary: #1a1a3e;
+  --color-secondary-foreground: #e8e0f8;
+
+  --color-muted: #1a1a3e;
+  --color-muted-foreground: #7878a8;
+
+  --color-accent: #1a1a3e;
+  --color-accent-foreground: #e8e0f8;
+
+  --color-destructive: #ef4444;
+  --color-destructive-foreground: #e8e0f8;
+
+  --color-border: #2a2a5e;
+  --color-input: #2a2a5e;
+  --color-ring: #fbbf24;
+
+  /* ── Sidebar ── */
+  --color-sidebar-background: #10102a;
+  --color-sidebar-foreground: #e8e0f8;
+  --color-sidebar-primary: #fbbf24;
+  --color-sidebar-primary-foreground: #08081a;
+  --color-sidebar-accent: #1a1a3e;
+  --color-sidebar-accent-foreground: #e8e0f8;
+  --color-sidebar-border: #2a2a5e;
+  --color-sidebar-ring: #fbbf24;
+
+  /* ── Theme Palette ── */
+  --color-gold: #fbbf24;
+  --color-gold-warm: #f59e0b;
+  --color-starlight: #60a5fa;
+  --color-surface-deep: #08081a;
+  --color-surface: #10102a;
+  --color-surface-muted: #1a1a3e;
+  --color-surface-border: #2a2a5e;
+  --color-text: #e8e0f8;
+  --color-text-muted: #7878a8;
+}
+
+/* ── Light Mode ── */
+
+:root[data-theme="light"] {
+  --color-background: #f0f0fa;
+  --color-foreground: #1a1a3e;
+
+  --color-card: #f8f8ff;
+  --color-card-foreground: #1a1a3e;
+
+  --color-popover: #f8f8ff;
+  --color-popover-foreground: #1a1a3e;
+
+  --color-primary: #b8860b;
+  --color-primary-foreground: #f8f8ff;
+
+  --color-secondary: #e4e4f0;
+  --color-secondary-foreground: #1a1a3e;
+
+  --color-muted: #e4e4f0;
+  --color-muted-foreground: #6868a0;
+
+  --color-accent: #e4e4f0;
+  --color-accent-foreground: #1a1a3e;
+
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #f8f8ff;
+
+  --color-border: #c0c0d8;
+  --color-input: #c0c0d8;
+  --color-ring: #b8860b;
+
+  --color-sidebar-background: #f8f8ff;
+  --color-sidebar-foreground: #1a1a3e;
+  --color-sidebar-primary: #b8860b;
+  --color-sidebar-primary-foreground: #f8f8ff;
+  --color-sidebar-accent: #e4e4f0;
+  --color-sidebar-accent-foreground: #1a1a3e;
+  --color-sidebar-border: #c0c0d8;
+  --color-sidebar-ring: #b8860b;
+
+  --color-gold: #b8860b;
+  --color-gold-warm: #d4960c;
+  --color-starlight: #3b6ec7;
+  --color-surface-deep: #f0f0fa;
+  --color-surface: #f8f8ff;
+  --color-surface-muted: #e4e4f0;
+  --color-surface-border: #c0c0d8;
+  --color-text: #1a1a3e;
+  --color-text-muted: #6868a0;
+}

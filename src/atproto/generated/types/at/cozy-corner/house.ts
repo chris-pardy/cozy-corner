@@ -5,7 +5,6 @@ import { type ValidationResult, BlobRef } from '@atproto/lexicon'
 import { CID } from 'multiformats/cid'
 import { validate as _validate } from '../../../lexicons'
 import { type $Typed, is$typed as _is$typed, type OmitKey } from '../../../util'
-import type * as ComAtprotoRepoStrongRef from '../../com/atproto/repo/strongRef.js'
 
 const is$typed = _is$typed,
   validate = _validate
@@ -17,7 +16,8 @@ export interface Main {
   name?: string
   /** Splash image shown while the house is loading. */
   splash?: BlobRef
-  entry: ComAtprotoRepoStrongRef.Main
+  /** Reference to the entry room record (at.cozy-corner.house.room). Visitors spawn in this room's spawn area. */
+  entry: string
   createdAt: string
   [k: string]: unknown
 }

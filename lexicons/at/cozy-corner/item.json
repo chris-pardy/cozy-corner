@@ -59,7 +59,7 @@
             "description": "Lua scripts that define how this item responds to events.",
             "items": {
               "type": "ref",
-              "ref": "at.cozy-corner.script#script"
+              "ref": "at.cozy-corner.defs#behavior"
             },
             "maxLength": 16
           },
@@ -82,8 +82,13 @@
     "variant": {
       "type": "object",
       "description": "A named visual variant for an item. Sets spatial properties and can override state values.",
-      "required": ["name", "target"],
+      "required": ["id", "name", "target"],
       "properties": {
+        "id": {
+          "type": "string",
+          "format": "tid",
+          "description": "The unique id of the variant (unique within the item)"
+        },
         "name": {
           "type": "string",
           "maxLength": 640,
@@ -92,7 +97,7 @@
         },
         "target": {
           "type": "string",
-          "description": "The layer target of the layers to render for this variant."
+          "description": "The default layer target of the layers to render for this variant."
         },
         "itemWidth": {
           "type": "integer",

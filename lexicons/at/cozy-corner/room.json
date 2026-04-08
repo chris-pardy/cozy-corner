@@ -1,0 +1,505 @@
+{
+  "lexicon": 1,
+  "id": "at.cozy-corner.room",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A Cozy Corner room. Rooms reference tilesets, items, and critters for a users inventory",
+      "key": "tid",
+      "required": ["name"],
+      "record": {
+        "type": "object",
+        "required": ["name", "tileset", "tiles", "createdAt"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 640,
+            "maxGraphemes": 64,
+            "description": "Display name for the room (e.g. Kitchen, Bedroom)."
+          },
+          "tileset": {
+            "description": "AT URI of the at.cozy-corner.tileset record.",
+            "type": "ref",
+            "ref": "com.atproto.repo.strongRef"
+          },
+          "tiles": {
+            "type": "array",
+            "description": "Tiles positioned in the room",
+            "minLength": 1,
+            "items": {
+              "type": "ref",
+              "ref": "#tile"
+            }
+          },
+          "background": {
+            "type": "union",
+            "description": "Background rendered behind the tile grid. Can be a solid color, gradient, or image.",
+            "refs": [
+              "#backgroundImage",
+              "#backgroundColor",
+              "#backgroundGradient"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "description": "Items placed in the room",
+            "maxLength": 64,
+            "items": {
+              "type": "ref",
+              "ref": "#roomItem"
+            }
+          },
+          "npcs": {
+            "type": "array",
+            "description": "npcs placed in the room. Each entry spawns an npc at the given position.",
+            "maxLength": 16,
+            "items": {
+              "type": "ref",
+              "ref": "#roomNpc"
+            }
+          },
+          "behaviors": {
+            "type": "array",
+            "description": "Lua scripts that define how this room responds to events (e.g. cutscenes on enter, ambient effects).",
+            "items": {
+              "type": "ref",
+              "ref": "at.cozy-corner.defs#behavior"
+            },
+            "maxLength": 16
+          },
+          "permissions": {
+            "description": "Permissions for the room",
+            "type": "ref",
+            "ref": "#roomPermissions"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    },
+    "tileAttribute": {
+      "type": "object",
+      "description": "A per-tile attribute score array. Values use the 0-100 scale",
+      "required": ["attribute", "value"],
+      "properties": {
+        "attribute": {
+          "type": "string",
+          "description": "Attribute name (e.g. 'light', 'heat', 'sound').",
+          "maxLength": 64
+        },
+        "value": {
+          "type": "integer",
+          "description": "Each value is 0-100 where 100 is neutral.",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "tile": {
+      "type": "object",
+      "description": "A tile position within a room",
+      "required": ["x", "y"],
+      "properties": {
+        "layers": {
+          "type": "array",
+          "description": "Layers for the tile",
+          "items": {
+            "type": "ref",
+            "ref": "#tileLayer"
+          },
+          "maxLength": 8
+        },
+        "x": {
+          "type": "integer",
+          "description": "The x position of the tile in the room",
+          "minimum": 0,
+          "maximum": 63
+        },
+        "y": {
+          "type": "integer",
+          "description": "The y position of the tile in the room",
+          "minimum": 0,
+          "maximum": 63
+        },
+        "blocking": {
+          "type": "integer",
+          "description": "Each value is a bitmask: bits 0-3 = physical blocking per direction (N=1, E=2, S=4, W=8), bits 4-7 = ephemeral blocking per direction (N=16, E=32, S=64, W=128). Physical blocks movement; ephemeral blocks light/sound/heat. A fully blocked tile has value 15 (physical) or 255 (both). 0 = no blocking.",
+          "minimum": 0,
+          "maximum": 255,
+          "default": 0
+        },
+        "spawn": {
+          "type": "boolean",
+          "description": "Whether this tile is a valid spawn tile. If omitted or false, the tile is not a valid spawn tile.",
+          "default": false
+        },
+        "exit": {
+          "type": "union",
+          "refs": ["#exit", "#selfExit"],
+          "description": "An exit on this tile"
+        },
+        "attributes": {
+          "type": "array",
+          "description": "Attributes for the tile",
+          "items": {
+            "type": "ref",
+            "ref": "#tileAttribute"
+          },
+          "maxLength": 8
+        }
+      }
+    },
+    "tileLayer": {
+      "type": "object",
+      "description": "A transformed animated layer for a tile",
+      "required": ["tileId"],
+      "properties": {
+        "tileId": {
+          "type": "string",
+          "format": "tid",
+          "description": "The unique id of the tile (unique within the tileset)"
+        },
+        "layerName": {
+          "type": "string",
+          "maxLength": 640,
+          "maxGraphemes": 64,
+          "description": "Display name for the layer (e.g. Floor, Walls, Canopy)."
+        },
+        "tints": {
+          "type": "array",
+          "description": "Tints for the tile layers",
+          "items": {
+            "type": "ref",
+            "ref": "at.cozy-corner.defs#channelTint"
+          }
+        },
+        "transform": {
+          "type": "integer",
+          "description": "Packed tile transform. Bits 0-2: rotation (0=0°, 1=90°, 2=180°, 3=270°). Bit 3: horizontal mirror. Bit 4: vertical mirror.",
+          "minimum": 0,
+          "maximum": 15,
+          "default": 0
+        },
+        "renderLayer": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2,
+          "description": "The layer to render the tile on, 0 = background, 1 = foreground, 2 = overhead"
+        }
+      }
+    },
+    "roomItem": {
+      "type": "object",
+      "description": "A an item placed in the room",
+      "required": ["item", "variantId", "x", "y"],
+      "properties": {
+        "item": {
+          "type": "ref",
+          "ref": "com.atproto.repo.strongRef",
+          "description": "Strong reference to the at.cozy-corner.item record."
+        },
+        "variantId": {
+          "type": "string",
+          "format": "tid",
+          "description": "The variant of the item to use",
+          "minimum": 0,
+          "maximum": 15
+        },
+        "x": {
+          "type": "integer",
+          "description": "The x position of the item in the room",
+          "minimum": 0,
+          "maximum": 63
+        },
+        "y": {
+          "type": "integer",
+          "description": "The y position of the item in the room",
+          "minimum": 0,
+          "maximum": 63
+        },
+        "tints": {
+          "type": "array",
+          "description": "Tints for the item layers",
+          "items": {
+            "type": "ref",
+            "ref": "at.cozy-corner.defs#channelTint"
+          }
+        },
+        "state": {
+          "type": "array",
+          "description": "State values for this placement, overriding variant and stateProperty defaults.",
+          "items": {
+            "type": "ref",
+            "ref": "at.cozy-corner.defs#stateValue"
+          },
+          "maxLength": 32
+        }
+      }
+    },
+    "backgroundImage": {
+      "type": "object",
+      "description": "A background image rendered behind the tile grid (e.g. sky, landscape for outdoor rooms).",
+      "required": ["image"],
+      "properties": {
+        "image": {
+          "type": "blob",
+          "description": "The background image.",
+          "accept": ["image/png", "image/webp", "image/jpeg"],
+          "maxSize": 2000000
+        }
+      }
+    },
+    "backgroundColor": {
+      "type": "object",
+      "description": "A solid color background rendered behind the tile grid.",
+      "required": ["color"],
+      "properties": {
+        "color": {
+          "type": "string",
+          "description": "Hex color value (e.g. #1a1a2e, #87ceeb).",
+          "maxLength": 7,
+          "minLength": 7
+        }
+      }
+    },
+    "backgroundGradient": {
+      "type": "object",
+      "description": "A gradient background rendered behind the tile grid.",
+      "required": ["stops"],
+      "properties": {
+        "angle": {
+          "type": "integer",
+          "description": "Gradient angle in degrees. 0 = top to bottom, 90 = left to right, 180 = bottom to top.",
+          "minimum": 0,
+          "maximum": 359,
+          "default": 0
+        },
+        "stops": {
+          "type": "array",
+          "description": "Gradient color stops. Must have at least 2.",
+          "maxLength": 8,
+          "items": {
+            "type": "ref",
+            "ref": "#gradientStop"
+          }
+        }
+      }
+    },
+    "gradientStop": {
+      "type": "object",
+      "description": "A color stop in a gradient.",
+      "required": ["color"],
+      "properties": {
+        "color": {
+          "type": "string",
+          "description": "Hex color value (e.g. #1a1a2e).",
+          "maxLength": 7,
+          "minLength": 7
+        },
+        "position": {
+          "type": "integer",
+          "description": "Position along the gradient as a percentage (0-100). If omitted, stops are evenly distributed.",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "exit": {
+      "type": "object",
+      "description": "A doorway or passage connecting this room to another.",
+      "required": ["id", "target"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "tid",
+          "description": "The unique id of the exit (unique within the room)"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 640,
+          "maxGraphemes": 64,
+          "description": "Display label for the exit (e.g. Upstairs, Kitchen)."
+        },
+        "target": {
+          "type": "ref",
+          "ref": "com.atproto.repo.strongRef",
+          "description": "Strong reference to the target at.cozy-corner.house.room. The CID pins the version of the room when this exit was last saved."
+        },
+        "targetExitId": {
+          "type": "string",
+          "format": "tid",
+          "description": "The unique id of the exit in the target room"
+        },
+        "direction": {
+          "type": "integer",
+          "description": "A bitmask of the direction the player must walk to traverse the exit. N=1, E=2, S=4, W=8",
+          "minimum": 1,
+          "maximum": 15,
+          "default": 15
+        }
+      }
+    },
+    "selfExit": {
+      "type": "object",
+      "description": "An exit that connects this room to itself",
+      "required": ["id", "targetExitId"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "tid",
+          "description": "The unique id of the exit (unique within the room)"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 640,
+          "maxGraphemes": 64,
+          "description": "Display label for the exit (e.g. Upstairs, Kitchen)."
+        },
+        "targetExitId": {
+          "type": "string",
+          "format": "tid",
+          "description": "The unique id of the exit in the target room"
+        },
+        "direction": {
+          "type": "integer",
+          "description": "A bitmask of the direction the player must walk to traverse the exit. N=1, E=2, S=4, W=8",
+          "minimum": 1,
+          "maximum": 15,
+          "default": 15
+        }
+      }
+    },
+    "roomNpc": {
+      "type": "object",
+      "description": "A npc placed in the room.",
+      "required": ["npc", "x", "y"],
+      "properties": {
+        "npc": {
+          "type": "ref",
+          "ref": "com.atproto.repo.strongRef",
+          "description": "Strong reference to the at.cozy-corner.npc record."
+        },
+        "x": {
+          "type": "integer",
+          "description": "The x position of the npc in the room",
+          "minimum": 0,
+          "maximum": 63
+        },
+        "y": {
+          "type": "integer",
+          "description": "The y position of the npc in the room",
+          "minimum": 0,
+          "maximum": 63
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 640,
+          "maxGraphemes": 64,
+          "description": "Override display name for this npc instance (e.g. Mr. Whiskers)."
+        },
+        "tints": {
+          "type": "array",
+          "description": "Tints for the npc layers",
+          "items": {
+            "type": "ref",
+            "ref": "at.cozy-corner.defs#channelTint"
+          }
+        },
+        "state": {
+          "type": "array",
+          "description": "State values for this npc placement, overriding stateProperty defaults.",
+          "items": {
+            "type": "ref",
+            "ref": "at.cozy-corner.defs#stateValue"
+          },
+          "maxLength": 32
+        }
+      }
+    },
+    "roomPermissions": {
+      "type": "object",
+      "description": "Permissions for the room",
+      "required": ["permissions"],
+      "properties": {
+        "permissions": {
+          "type": "array",
+          "description": "Permissions for the room",
+          "items": {
+            "type": "string",
+            "description": "The actions that are granted for all users",
+            "enum": [
+              "move",
+              "move:self",
+              "interact",
+              "say",
+              "exit",
+              "prompt",
+              "prompt:self",
+              "cutscene",
+              "cutscene:self",
+              "animate",
+              "animate:self",
+              "camera",
+              "camera:self",
+              "open",
+              "open:self",
+              "state",
+              "state:self",
+              "attributes"
+            ]
+          }
+        },
+        "userPermissions": {
+          "type": "array",
+          "description": "Permissions for specific users",
+          "items": {
+            "type": "ref",
+            "ref": "#userRoomPermission"
+          }
+        }
+      }
+    },
+    "userRoomPermission": {
+      "type": "object",
+      "description": "Permissions for a specific user",
+      "required": ["did", "permissions"],
+      "properties": {
+        "did": {
+          "type": "string",
+          "format": "did",
+          "description": "The DID of the user"
+        },
+        "permissions": {
+          "type": "array",
+          "description": "Permissions for the user",
+          "items": {
+            "type": "string",
+            "description": "The actions that are granted for the user",
+            "enum": [
+              "move",
+              "move:self",
+              "interact",
+              "say",
+              "exit",
+              "prompt",
+              "prompt:self",
+              "cutscene",
+              "cutscene:self",
+              "animate",
+              "animate:self",
+              "camera",
+              "camera:self",
+              "open",
+              "open:self",
+              "state",
+              "state:self",
+              "attributes"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

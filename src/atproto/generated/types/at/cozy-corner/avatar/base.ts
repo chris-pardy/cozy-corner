@@ -10,7 +10,6 @@ import {
   type OmitKey,
 } from '../../../../util'
 import type * as AtCozyCornerDefs from '../defs.js'
-import type * as AtCozyCornerScript from '../script.js'
 
 const is$typed = _is$typed,
   validate = _validate
@@ -25,10 +24,10 @@ export interface Main {
   /** Tags for the base avatar. */
   tags?: string[]
   spriteSheet: BlobRef
-  /** Animation layers for the base avatar. A complete base avatar should provide layers for the well-known targets: walk (south/north/east/west), sit (south/north/east/west), hold (south/north/east/west), push (south/north/east/west), pickup (south/north/east/west), and dance. Stand pose reuses walk frame 1. Frame count and frame rate are per-layer. Authoring tools may generate east/west by mirroring. */
+  /** Animation layers for the base avatar. A complete base avatar should provide layers for the well-known targets: idle (south/north/east/west), walk (south/north/east/west), sit (south/north/east/west), hold (south/north/east/west), push (south/north/east/west), pickup (south/north/east/west), and dance. Frame count and frame rate are per-layer. Authoring tools may generate east/west by mirroring. */
   layers: AtCozyCornerDefs.AnimationLayer[]
   /** Lua scripts that define how this avatar base responds to events (e.g. setting animation state based on movement, intercepting move events). */
-  behaviors?: AtCozyCornerScript.Script[]
+  behaviors?: AtCozyCornerDefs.Behavior[]
   /** Declares the configurable state properties for this base avatar. Behaviors read these via entityState. */
   stateProperties?: AtCozyCornerDefs.StateProperty[]
   createdAt: string

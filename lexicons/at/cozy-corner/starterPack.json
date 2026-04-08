@@ -32,7 +32,7 @@
             "type": "array",
             "items": {
               "type": "ref",
-              "ref": "at.cozy-corner.defs#categorizedEntry"
+              "ref": "#categorizedEntry"
             },
             "maxLength": 256
           },
@@ -40,6 +40,29 @@
             "type": "string",
             "format": "datetime"
           }
+        }
+      }
+    },
+    "categorizedEntry": {
+      "type": "object",
+      "description": "An entry in a category.",
+      "required": ["item", "category"],
+      "properties": {
+        "item": {
+          "type": "ref",
+          "ref": "com.atproto.repo.strongRef",
+          "description": "Strong reference to the item record."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of the entry.",
+          "knownValues": [
+            "item",
+            "wearable",
+            "tileset",
+            "baseAvatar",
+            "npc"
+          ]
         }
       }
     }

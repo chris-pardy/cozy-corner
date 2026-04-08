@@ -1,0 +1,55 @@
+/*
+ * Starlit Workshop — Base Styles
+ * Applied globally: typography, transitions, scrollbar, focus rings.
+ */
+
+* {
+  border-color: var(--color-border);
+}
+
+html {
+  font-family: var(--font-body);
+  color: var(--color-foreground);
+  background: var(--color-background);
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+}
+
+/* ── Focus rings ── */
+
+input:focus,
+button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-gold);
+}
+
+/* ── Scrollbar ── */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-border);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
