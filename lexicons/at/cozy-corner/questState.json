@@ -1,0 +1,169 @@
+{
+  "lexicon": 1,
+  "id": "at.cozy-corner.questState",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "Tracks a player's progress through a quest. Each record represents one active or completed quest instance, holding triggers that advance the quest, a key-value state bag, and a task checklist.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["questId", "triggers", "tasks", "createdAt"],
+        "properties": {
+          "questId": {
+            "type": "string",
+            "description": "Identifier for the quest definition this state tracks.",
+            "maxLength": 640,
+            "maxGraphemes": 64
+          },
+          "triggers": {
+            "type": "array",
+            "description": "Active triggers that can advance this quest. Each trigger fires when a specific game event occurs.",
+            "items": {
+              "type": "union",
+              "refs": [
+                "#itemInteractionTrigger",
+                "#npcInteractionTrigger",
+                "#enterRoomTrigger",
+                "#exitRoomTrigger",
+                "#questStateUpdatedTrigger"
+              ]
+            },
+            "maxLength": 64
+          },
+          "state": {
+            "type": "array",
+            "description": "Key-value state bag for this quest instance. Behaviors and triggers read and write these values to track quest progress.",
+            "items": {
+              "type": "ref",
+              "ref": "#stateEntry"
+            },
+            "maxLength": 128
+          },
+          "tasks": {
+            "type": "array",
+            "description": "Checklist of objectives for this quest. Displayed to the player as a task list.",
+            "items": {
+              "type": "ref",
+              "ref": "#task"
+            },
+            "maxLength": 64
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    },
+    "itemInteractionTrigger": {
+      "type": "object",
+      "description": "Fires when the player interacts with a specific item.",
+      "required": ["item"],
+      "properties": {
+        "item": {
+          "type": "ref",
+          "ref": "com.atproto.repo.strongRef",
+          "description": "Strong reference to the at.cozy-corner.item record."
+        }
+      }
+    },
+    "npcInteractionTrigger": {
+      "type": "object",
+      "description": "Fires when the player interacts with a specific NPC.",
+      "required": ["npc"],
+      "properties": {
+        "npc": {
+          "type": "ref",
+          "ref": "com.atproto.repo.strongRef",
+          "description": "Strong reference to the at.cozy-corner.npc record."
+        }
+      }
+    },
+    "enterRoomTrigger": {
+      "type": "object",
+      "description": "Fires when the player enters a specific room.",
+      "required": ["room"],
+      "properties": {
+        "room": {
+          "type": "ref",
+          "ref": "com.atproto.repo.strongRef",
+          "description": "Strong reference to the at.cozy-corner.room record."
+        }
+      }
+    },
+    "exitRoomTrigger": {
+      "type": "object",
+      "description": "Fires when the player leaves a room through a specific exit.",
+      "required": ["room", "exitId"],
+      "properties": {
+        "room": {
+          "type": "ref",
+          "ref": "com.atproto.repo.strongRef",
+          "description": "Strong reference to the at.cozy-corner.room record the exit belongs to."
+        },
+        "exitId": {
+          "type": "string",
+          "format": "tid",
+          "description": "The ID of the exit within the room."
+        }
+      }
+    },
+    "questStateUpdatedTrigger": {
+      "type": "object",
+      "description": "Fires when another quest's state is updated. Allows quest chaining and dependencies.",
+      "required": ["quest"],
+      "properties": {
+        "quest": {
+          "type": "string",
+          "description": "The questId of the quest whose state update fires this trigger.",
+          "maxLength": 640,
+          "maxGraphemes": 64
+        }
+      }
+    },
+    "stateEntry": {
+      "type": "object",
+      "description": "A single key-value pair in the quest state bag.",
+      "required": ["key", "value"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "description": "State key name.",
+          "maxLength": 256,
+          "maxGraphemes": 64
+        },
+        "value": {
+          "type": "string",
+          "description": "State value.",
+          "maxLength": 2560,
+          "maxGraphemes": 256
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "description": "A single quest objective shown to the player.",
+      "required": ["id", "text", "completed"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for this task within the quest.",
+          "maxLength": 256,
+          "maxGraphemes": 64
+        },
+        "text": {
+          "type": "string",
+          "description": "Display text describing the objective.",
+          "maxLength": 2560,
+          "maxGraphemes": 256
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Whether this task has been completed.",
+          "default": false
+        }
+      }
+    }
+  }
+}
