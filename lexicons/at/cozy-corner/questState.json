@@ -58,44 +58,69 @@
     },
     "itemInteractionTrigger": {
       "type": "object",
-      "description": "Fires when the player interacts with a specific item.",
-      "required": ["item"],
+      "description": "Fires when the player interacts with a specific item in a room.",
+      "required": ["room", "entityId", "scene"],
       "properties": {
-        "item": {
+        "room": {
           "type": "ref",
           "ref": "com.atproto.repo.strongRef",
-          "description": "Strong reference to the at.cozy-corner.item record."
+          "description": "Strong reference to the at.cozy-corner.room record containing the item."
+        },
+        "entityId": {
+          "type": "string",
+          "description": "The entity ID of the item within the room.",
+          "maxLength": 256
+        },
+        "scene": {
+          "type": "ref",
+          "ref": "com.atproto.repo.strongRef",
+          "description": "Strong reference to the at.cozy-corner.scene to run when this trigger fires."
         }
       }
     },
     "npcInteractionTrigger": {
       "type": "object",
-      "description": "Fires when the player interacts with a specific NPC.",
-      "required": ["npc"],
+      "description": "Fires when the player interacts with a specific NPC in a room.",
+      "required": ["room", "entityId", "scene"],
       "properties": {
-        "npc": {
+        "room": {
           "type": "ref",
           "ref": "com.atproto.repo.strongRef",
-          "description": "Strong reference to the at.cozy-corner.npc record."
+          "description": "Strong reference to the at.cozy-corner.room record containing the NPC."
+        },
+        "entityId": {
+          "type": "string",
+          "description": "The entity ID of the NPC within the room.",
+          "maxLength": 256
+        },
+        "scene": {
+          "type": "ref",
+          "ref": "com.atproto.repo.strongRef",
+          "description": "Strong reference to the at.cozy-corner.scene to run when this trigger fires."
         }
       }
     },
     "enterRoomTrigger": {
       "type": "object",
       "description": "Fires when the player enters a specific room.",
-      "required": ["room"],
+      "required": ["room", "scene"],
       "properties": {
         "room": {
           "type": "ref",
           "ref": "com.atproto.repo.strongRef",
           "description": "Strong reference to the at.cozy-corner.room record."
+        },
+        "scene": {
+          "type": "ref",
+          "ref": "com.atproto.repo.strongRef",
+          "description": "Strong reference to the at.cozy-corner.scene to run when this trigger fires."
         }
       }
     },
     "exitRoomTrigger": {
       "type": "object",
       "description": "Fires when the player leaves a room through a specific exit.",
-      "required": ["room", "exitId"],
+      "required": ["room", "exitId", "scene"],
       "properties": {
         "room": {
           "type": "ref",
@@ -106,19 +131,29 @@
           "type": "string",
           "format": "tid",
           "description": "The ID of the exit within the room."
+        },
+        "scene": {
+          "type": "ref",
+          "ref": "com.atproto.repo.strongRef",
+          "description": "Strong reference to the at.cozy-corner.scene to run when this trigger fires."
         }
       }
     },
     "questStateUpdatedTrigger": {
       "type": "object",
       "description": "Fires when another quest's state is updated. Allows quest chaining and dependencies.",
-      "required": ["quest"],
+      "required": ["quest", "scene"],
       "properties": {
         "quest": {
           "type": "string",
           "description": "The questId of the quest whose state update fires this trigger.",
           "maxLength": 640,
           "maxGraphemes": 64
+        },
+        "scene": {
+          "type": "ref",
+          "ref": "com.atproto.repo.strongRef",
+          "description": "Strong reference to the at.cozy-corner.scene to run when this trigger fires."
         }
       }
     },
